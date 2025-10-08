@@ -133,15 +133,15 @@ export const Winners: React.FC = () => {
       header: 'Prize Status',
       render: (winner: Winner) => getStatusBadge(winner.prizeStatus),
     },
-    {
-      key: 'notification',
+    ///{
+     /* key: 'notification',
       header: 'Notification',
       render: (winner: Winner) => (
         <Badge variant={winner.notificationSent ? 'success' : 'warning'} size="sm">
-          {winner.notificationSent ? 'Sent' : 'Pending'}
-        </Badge>
-      ),
-    },
+    /     {winner.notificationSent ? 'Sent' : 'Pending'}*/
+    ///    </Badge>
+    ///  ),
+    ///},
     {
       key: 'actions',
       header: 'Actions',
@@ -250,23 +250,17 @@ export const Winners: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Winner Management</h1>
-          <p className="text-gray-600 mt-1">Manage winners and prize distribution</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Winner Management</h1>
+          <p className="text-gray-600 mt-1 text-sm sm:text-base">Manage winners and prize distribution</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="secondary"
-            icon={<Send className="w-5 h-5" />}
-            onClick={handleBulkNotify}
-          >
-            Notify All
-          </Button>
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
           <Button
             variant="primary"
             icon={<Download className="w-5 h-5" />}
             onClick={handleExportReport}
+            className="w-full sm:w-auto"
           >
             Export Report
           </Button>

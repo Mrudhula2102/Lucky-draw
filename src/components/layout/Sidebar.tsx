@@ -10,6 +10,7 @@ import {
   BarChart3,
   Settings,
   UserCog,
+  X,
 } from 'lucide-react';
 
 interface NavItem {
@@ -30,18 +31,50 @@ const navItems: NavItem[] = [
   { path: '/settings', icon: <Settings className="w-5 h-5" />, label: 'Settings' },
 ];
 
-export const Sidebar: React.FC = () => {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 h-screen sticky top-0 flex flex-col">
+    <>
+      {/* Mobile Overlay */}
+      {isOpen && onClose && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={onClose}
+        />
+      )}
+      
+      {/* Sidebar */}
+      <aside className={`
+        fixed lg:static inset-y-0 left-0 z-50
+        w-64 bg-white border-r border-gray-200 h-screen flex flex-col
+        transform transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
       <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg flex items-center justify-center">
             <Sparkles className="w-6 h-6 text-white" />
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Lucky Draw</h1>
-            <p className="text-xs text-gray-500">Admin Panel</p>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Lucky Draw</h1>
+              <p className="text-xs text-gray-500">Admin Panel</p>
+            </div>
           </div>
+          
+          {/* Close button for mobile */}
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="lg:hidden p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -67,7 +100,7 @@ export const Sidebar: React.FC = () => {
         </ul>
       </nav>
 
-      
     </aside>
+    </>
   );
 };

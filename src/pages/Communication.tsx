@@ -131,8 +131,8 @@ export const Communication: React.FC = () => {
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Communication</h1>
-        <p className="text-gray-600 mt-1">Send messages and notifications to participants</p>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Communication</h1>
+        <p className="text-gray-600 mt-1 text-sm sm:text-base">Send messages and notifications to participants</p>
       </div>
 
       {/* Stats */}

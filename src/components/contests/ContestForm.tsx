@@ -149,7 +149,7 @@ export const ContestForm: React.FC<ContestFormProps> = ({ contest, onSave, onCan
             placeholder="Select end time"
             required
           />
-          <div>
+          {/* <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Contest Status</label>
             <select
               name="status"
@@ -164,7 +164,7 @@ export const ContestForm: React.FC<ContestFormProps> = ({ contest, onSave, onCan
               <option value={ContestStatus.COMPLETED}>Completed</option>
               <option value={ContestStatus.CANCELLED}>Cancelled</option>
             </select>
-          </div>
+          </div> */}
         </div>
         {timeError && (
           <p className="text-sm text-red-600 font-medium">{timeError}</p>
@@ -220,7 +220,7 @@ export const ContestForm: React.FC<ContestFormProps> = ({ contest, onSave, onCan
         )}
 
         {/* Add New Prize */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <Input
             placeholder="Prize name"
             value={newPrize.name}
@@ -243,6 +243,7 @@ export const ContestForm: React.FC<ContestFormProps> = ({ contest, onSave, onCan
             variant="secondary"
             icon={<Plus className="w-4 h-4" />}
             onClick={handleAddPrize}
+            className="w-full"
           >
             Add Prize
           </Button>
@@ -250,11 +251,11 @@ export const ContestForm: React.FC<ContestFormProps> = ({ contest, onSave, onCan
       </div>
 
       {/* Form Actions */}
-      <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-        <Button type="button" variant="secondary" onClick={onCancel}>
+      <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-gray-200">
+        <Button type="button" variant="secondary" onClick={onCancel} className="w-full sm:w-auto order-2 sm:order-1">
           Cancel
         </Button>
-        <Button type="submit" variant="primary">
+        <Button type="submit" variant="primary" className="w-full sm:w-auto order-1 sm:order-2">
           {contest ? 'Update Contest' : 'Create Contest'}
         </Button>
       </div>

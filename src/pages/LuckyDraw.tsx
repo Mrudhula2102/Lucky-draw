@@ -215,8 +215,8 @@ export const LuckyDraw: React.FC = () => {
 
       {/* Page Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Lucky Draw Execution</h1>
-        <p className="text-gray-600 mt-1">Execute random draws and select winners</p>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Lucky Draw Execution</h1>
+        <p className="text-gray-600 mt-1 text-sm sm:text-base">Execute random draws and select winners</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

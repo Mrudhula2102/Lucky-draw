@@ -60,18 +60,18 @@ export const Settings: React.FC = () => {
   };
 
   const tabs = [
-    { id: 'general', label: 'General', icon: <Globe className="w-4 h-4" /> },
+    // { id: 'general', label: 'General', icon: <Globe className="w-4 h-4" /> },
     { id: 'notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" /> },
     { id: 'security', label: 'Security', icon: <Shield className="w-4 h-4" /> },
-    { id: 'email', label: 'Email', icon: <Mail className="w-4 h-4" /> },
+    // { id: 'email', label: 'Email', icon: <Mail className="w-4 h-4" /> },
   ];
 
   return (
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600 mt-1">Manage your application settings and preferences</p>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Settings</h1>
+        <p className="text-gray-600 mt-1 text-sm sm:text-base">Manage your application settings and preferences</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -97,7 +97,7 @@ export const Settings: React.FC = () => {
 
         {/* Content */}
         <div className="lg:col-span-3">
-          {activeTab === 'general' && (
+          {/* {activeTab === 'general' && (
             <Card title="General Settings" subtitle="Configure basic application settings">
               <form onSubmit={handleSaveGeneral} className="space-y-4">
                 <Input
@@ -162,7 +162,7 @@ export const Settings: React.FC = () => {
                 </div>
               </form>
             </Card>
-          )}
+          )} */}
 
           {activeTab === 'notifications' && (
             <Card title="Notification Settings" subtitle="Configure notification preferences">
@@ -343,7 +343,7 @@ export const Settings: React.FC = () => {
             </Card>
           )}
 
-          {activeTab === 'email' && (
+          {/* {activeTab === 'email' && (
             <Card title="Email Settings" subtitle="Configure SMTP and email preferences">
               <form onSubmit={handleSaveEmail} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -417,7 +417,7 @@ export const Settings: React.FC = () => {
                 </div>
               </form>
             </Card>
-          )}
+          )} */}
         </div>
       </div>
     </div>

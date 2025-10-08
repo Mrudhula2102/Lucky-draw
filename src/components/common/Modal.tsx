@@ -41,6 +41,13 @@ export const Modal: React.FC<ModalProps> = ({
     lg: 'max-w-2xl',
     xl: 'max-w-4xl',
   };
+  
+  const mobileSizeClasses = {
+    sm: 'sm:max-w-md',
+    md: 'sm:max-w-lg',
+    lg: 'sm:max-w-2xl',
+    xl: 'sm:max-w-4xl',
+  };
 
   return (
     <AnimatePresence>
@@ -53,25 +60,25 @@ export const Modal: React.FC<ModalProps> = ({
             className="fixed inset-0 bg-black bg-opacity-50 z-40"
             onClick={onClose}
           />
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className={`bg-white rounded-xl shadow-2xl w-full ${sizeClasses[size]} max-h-[90vh] flex flex-col`}
+              className={`bg-white rounded-xl shadow-2xl w-full ${sizeClasses[size]} max-h-[95vh] sm:max-h-[90vh] flex flex-col`}
             >
-              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-                <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
+              <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 truncate pr-4">{title}</h2>
                 <button
                   onClick={onClose}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <div className="px-6 py-4 overflow-y-auto flex-1">{children}</div>
+              <div className="px-4 sm:px-6 py-4 overflow-y-auto flex-1">{children}</div>
               {footer && (
-                <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+                <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
                   {footer}
                 </div>
               )}

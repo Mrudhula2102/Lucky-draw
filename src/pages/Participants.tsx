@@ -181,19 +181,18 @@ export const Participants: React.FC = () => {
   const handleRemoveDuplicates = () => {
     const validParticipants = participants.filter((p) => !p.isDuplicate);
     setParticipants(validParticipants);
-    toast.success('Duplicate participants removed!');
   };
 
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Participant Management</h1>
-          <p className="text-gray-600 mt-1">Manage and validate contest participants</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Participant Management</h1>
+          <p className="text-gray-600 mt-1 text-sm sm:text-base">Manage and validate contest participants</p>
         </div>
-        <div className="flex items-center gap-3">
-          <label htmlFor="import-file" className="cursor-pointer">
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <label htmlFor="import-file" className="cursor-pointer w-full sm:w-auto">
             <input
               id="import-file"
               type="file"
@@ -201,30 +200,24 @@ export const Participants: React.FC = () => {
               onChange={handleImport}
               className="hidden"
             />
-            <span className="inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 text-base">
+            <span className="inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 text-base w-full sm:w-auto">
               <Upload className="w-5 h-5 mr-2" />
               Import
             </span>
           </label>
           <Button
-            variant="secondary"
+            variant="primary"
             icon={<Download className="w-5 h-5" />}
             onClick={handleExportExcel}
+            className="w-full sm:w-auto"
           >
-            Export Excel
-          </Button>
-          <Button
-            variant="secondary"
-            icon={<Download className="w-5 h-5" />}
-            onClick={handleExportCSV}
-          >
-            Export CSV
+            Export
           </Button>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <div className="text-center">
             <p className="text-3xl font-bold text-gray-900">{participants.length}</p>

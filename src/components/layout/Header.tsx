@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
-import { Bell, Search, User, LogOut, Settings, ChevronDown } from 'lucide-react';
+import { Bell, Search, User, LogOut, Settings, ChevronDown, Menu } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useNavigate } from 'react-router-dom';
 
-export const Header: React.FC = () => {
+interface HeaderProps {
+  onMenuClick?: () => void;
+}
+
+export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const { user, logout } = useAuthStore();
   const { notifications, unreadCount, markAsRead } = useNotificationStore();
   const navigate = useNavigate();
@@ -18,9 +22,19 @@ export const Header: React.FC = () => {
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
-      <div className="px-6 py-4 flex items-center justify-between">
+      <div className="px-4 sm:px-6 py-4 flex items-center justify-between gap-4">
+        {/* Mobile Menu Button */}
+        {onMenuClick && (
+          <button
+            onClick={onMenuClick}
+            className="lg:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+        )}
+
         {/* Search Bar */}
-        <div className="flex-1 max-w-xl">
+        <div className="flex-1 max-w-xl hidden sm:block">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
@@ -30,6 +44,11 @@ export const Header: React.FC = () => {
             />
           </div>
         </div>
+        
+        {/* Mobile Search Icon */}
+        <button className="sm:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg">
+          <Search className="w-5 h-5" />
+        </button>
 
         {/* Right Section */}
         <div className="flex items-center gap-4 ml-6">

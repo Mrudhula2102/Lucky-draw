@@ -374,35 +374,42 @@ export const Contests: React.FC = () => {
     try {
       const newActiveStatus = !contest.isActive;
       
+      let newStatus = contest.status;
+      
+      if (newActiveStatus) {
+        // Enabling: Calculate status based on current date/time
+        const { status: calculatedStatus } = getAutoStatus(contest.startTime, contest.endTime);
+        newStatus = calculatedStatus;
+        console.log(`🟢 Enabling contest "${contest.name}" - Status will be: ${newStatus}`);
+      } else {
+        // Disabling: Set status to CANCELLED to stop the contest
+        newStatus = ContestStatus.CANCELLED;
+        console.log(`🔴 Disabling contest "${contest.name}" - Status will be: CANCELLED`);
+      }
+      
       // Update local state immediately for better UX
       setContests(contests.map(c => 
-        c.id === contest.id ? { ...c, isActive: newActiveStatus } : c
+        c.id === contest.id ? { ...c, isActive: newActiveStatus, status: newStatus } : c
       ));
       
-      // Try to update in database (will work if is_active column exists)
+      // Update in database
       try {
         await DatabaseService.updateContest(parseInt(contest.id), {
-          is_active: newActiveStatus
+          status: newStatus,
+          // is_active: newActiveStatus  // Uncomment when column exists
         } as any);
         
         const statusText = newActiveStatus ? 'enabled' : 'disabled';
-        console.log(`Contest "${contest.name}" ${statusText} successfully`);
+        console.log(`✅ Contest "${contest.name}" ${statusText} successfully. Status: ${newStatus}`);
         setError(null);
       } catch (dbErr: any) {
-        // If database update fails, keep the local state change but warn user
-        console.warn('Database update failed (is_active column may not exist):', dbErr);
+        console.error('❌ Failed to update contest in database:', dbErr);
         
-        // Check if it's a column not found error
-        if (dbErr?.message?.includes('is_active') || dbErr?.message?.includes('column')) {
-          console.warn('is_active column does not exist in database. Changes are local only and will not persist.');
-          // Don't show error to user - let them use the feature locally
-        } else {
-          // For other errors, revert the local change
-          setContests(contests.map(c => 
-            c.id === contest.id ? { ...c, isActive: !newActiveStatus } : c
-          ));
-          setError('Failed to update contest status in database.');
-        }
+        // Revert the local change
+        setContests(contests.map(c => 
+          c.id === contest.id ? { ...c, isActive: !newActiveStatus, status: contest.status } : c
+        ));
+        setError('Failed to update contest status in database.');
       }
     } catch (err) {
       console.error('Error toggling contest status:', err);
@@ -624,10 +631,10 @@ export const Contests: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Contest Management</h1>
-          <p className="text-gray-600 mt-1">Create and manage your lucky draw contests</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Contest Management</h1>
+          <p className="text-gray-600 mt-1 text-sm sm:text-base">Create and manage your lucky draw contests</p>
         </div>
         <Button
           variant="primary"
@@ -636,6 +643,7 @@ export const Contests: React.FC = () => {
             setEditingContest(null);
             setShowCreateModal(true);
           }}
+          className="w-full sm:w-auto"
         >
           Create Contest
         </Button>
@@ -665,8 +673,8 @@ export const Contests: React.FC = () => {
 
       {/* Filters */}
       <Card>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="md:col-span-2">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1">
             <Input
               placeholder="Search contests..."
               value={searchTerm}
@@ -674,18 +682,16 @@ export const Contests: React.FC = () => {
               icon={<Search className="w-5 h-5" />}
             />
           </div>
-          <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-gray-400" />
+          <div className="flex gap-2">
             <select
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as ContestStatus | 'ALL')}
-              className="input-field"
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="flex-1 sm:flex-none px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
             >
               <option value="ALL">All Status</option>
               <option value={ContestStatus.DRAFT}>Draft</option>
               <option value={ContestStatus.UPCOMING}>Upcoming</option>
               <option value={ContestStatus.ONGOING}>Ongoing</option>
-              <option value={ContestStatus.COMPLETED}>Completed</option>
               <option value={ContestStatus.CANCELLED}>Cancelled</option>
             </select>
           </div>
@@ -694,7 +700,11 @@ export const Contests: React.FC = () => {
 
       {/* Contests Table */}
       <Card>
-        <Table data={filteredContests} columns={columns} emptyMessage="No contests found" />
+        <div className="overflow-x-auto -mx-6 sm:mx-0">
+          <div className="inline-block min-w-full align-middle">
+            <Table data={filteredContests} columns={columns} emptyMessage="No contests found" />
+          </div>
+        </div>
       </Card>
 
       {/* Create/Edit Modal */}
