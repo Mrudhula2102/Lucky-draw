@@ -18,8 +18,8 @@ export interface Contest {
   theme?: string | null;
   description?: string | null;
   entry_form_id?: number | null;
-  start_date: string;
-  end_date: string;
+  start_time: string; // Lucky draw start time (required)
+  end_time: string;   // Lucky draw end time (required)
   entry_rules?: any | null;
   status: 'DRAFT' | 'UPCOMING' | 'ONGOING' | 'COMPLETED' | 'CANCELLED';
   created_by?: number | null;

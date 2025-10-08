@@ -70,8 +70,8 @@ export const Dashboard: React.FC = () => {
         name: contest.name,
         theme: contest.theme || '',
         description: contest.description || '',
-        startDate: contest.start_date,
-        endDate: contest.end_date,
+        startTime: contest.start_time,
+        endTime: contest.end_time,
         status: contest.status as ContestStatus,
         prizes: (contest as any).prizes?.map((prize: any) => ({
           id: prize.prize_id.toString(),
@@ -122,8 +122,8 @@ export const Dashboard: React.FC = () => {
         name: 'Sample Contest (Demo)',
         theme: 'Demo',
         description: 'This is sample data - database connection needed',
-        startDate: '2025-09-15',
-        endDate: '2025-10-15',
+        startTime: '2025-09-15T10:00:00',
+        endTime: '2025-10-15T18:00:00',
         status: ContestStatus.ONGOING,
         prizes: [],
         entryRules: 'One entry per person',
@@ -139,8 +139,8 @@ export const Dashboard: React.FC = () => {
         name: 'Diwali Special Draw',
         theme: 'Festival',
         description: 'Celebrate with us',
-        startDate: '2025-10-20',
-        endDate: '2025-11-05',
+        startTime: '2025-10-20T10:00:00',
+        endTime: '2025-11-05T18:00:00',
         status: ContestStatus.UPCOMING,
         prizes: [],
         entryRules: 'One entry per person',
@@ -352,8 +352,8 @@ export const Dashboard: React.FC = () => {
                 </div>
                 <p className="text-sm text-gray-600">{contest.description}</p>
                 <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                  <span>Start: {formatDate(contest.startDate, 'MMM dd, yyyy')}</span>
-                  <span>End: {formatDate(contest.endDate, 'MMM dd, yyyy')}</span>
+                  <span>Start: {formatDate(contest.startTime, 'MMM dd, yyyy HH:mm')}</span>
+                  <span>End: {formatDate(contest.endTime, 'MMM dd, yyyy HH:mm')}</span>
                   <span>{formatNumber(contest.totalParticipants)} participants</span>
                 </div>
               </div>

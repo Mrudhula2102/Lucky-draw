@@ -15,8 +15,8 @@ export const ContestForm: React.FC<ContestFormProps> = ({ contest, onSave, onCan
     name: contest?.name || '',
     theme: contest?.theme || '',
     description: contest?.description || '',
-    startDate: contest?.startDate || '',
-    endDate: contest?.endDate || '',
+    startTime: contest?.startTime || '',
+    endTime: contest?.endTime || '',
     status: contest?.status || ContestStatus.DRAFT,
     entryRules: contest?.entryRules || 'one entry',
     participationMethod: contest?.participationMethod || [],
@@ -24,7 +24,7 @@ export const ContestForm: React.FC<ContestFormProps> = ({ contest, onSave, onCan
 
   const [prizes, setPrizes] = useState<Prize[]>(contest?.prizes || []);
   const [newPrize, setNewPrize] = useState({ name: '', value: '', quantity: '' });
-  const [dateError, setDateError] = useState('');
+  const [timeError, setTimeError] = useState('');
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -32,15 +32,23 @@ export const ContestForm: React.FC<ContestFormProps> = ({ contest, onSave, onCan
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
 
-    // Validate dates
-    if (name === 'startDate' || name === 'endDate') {
-      const startDate = name === 'startDate' ? value : formData.startDate;
-      const endDate = name === 'endDate' ? value : formData.endDate;
+    // Validate times
+    if (name === 'startTime' || name === 'endTime') {
+      const startTime = name === 'startTime' ? value : formData.startTime;
+      const endTime = name === 'endTime' ? value : formData.endTime;
       
-      if (startDate && endDate && new Date(endDate) <= new Date(startDate)) {
-        setDateError('Incorrect date: End date must be after start date');
+      if (startTime && endTime) {
+        // Create datetime objects for comparison
+        const startDateTime = new Date(startTime);
+        const endDateTime = new Date(endTime);
+        
+        if (endDateTime <= startDateTime) {
+          setTimeError('Lucky Draw End Time must be after Start Time');
+        } else {
+          setTimeError('');
+        }
       } else {
-        setDateError('');
+        setTimeError('');
       }
     }
   };
@@ -67,9 +75,20 @@ export const ContestForm: React.FC<ContestFormProps> = ({ contest, onSave, onCan
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate dates before submission
-    if (formData.startDate && formData.endDate && new Date(formData.endDate) <= new Date(formData.startDate)) {
-      setDateError('Incorrect date: End date must be after start date');
+    // Validate times before submission
+    if (formData.startTime && formData.endTime) {
+      const startDateTime = new Date(formData.startTime);
+      const endDateTime = new Date(formData.endTime);
+      
+      if (endDateTime <= startDateTime) {
+        setTimeError('Lucky Draw End Time must be after Start Time');
+        return;
+      }
+    }
+    
+    // Ensure required fields are present
+    if (!formData.startTime || !formData.endTime) {
+      setTimeError('Both Start Time and End Time are required');
       return;
     }
     
@@ -107,33 +126,37 @@ export const ContestForm: React.FC<ContestFormProps> = ({ contest, onSave, onCan
         />
       </div>
 
-      {/* Dates and Status */}
+      {/* Lucky Draw Schedule & Status */}
       <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-gray-900">Schedule</h3>
+        <h3 className="text-lg font-semibold text-gray-900">Lucky Draw Schedule</h3>
+        <p className="text-sm text-gray-600">Specify the exact time window when the lucky draw will be active</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Input
-            label="Start Date"
-            name="startDate"
-            type="date"
-            value={formData.startDate}
+            label="Lucky Draw Start Time"
+            name="startTime"
+            type="datetime-local"
+            value={formData.startTime}
             onChange={handleChange}
+            placeholder="Select start time"
             required
           />
           <Input
-            label="End Date"
-            name="endDate"
-            type="date"
-            value={formData.endDate}
+            label="Lucky Draw End Time"
+            name="endTime"
+            type="datetime-local"
+            value={formData.endTime}
             onChange={handleChange}
+            placeholder="Select end time"
             required
           />
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Contest Status</label>
             <select
               name="status"
               value={formData.status}
               onChange={handleChange}
               className="input-field"
+              required
             >
               <option value={ContestStatus.DRAFT}>Draft</option>
               <option value={ContestStatus.UPCOMING}>Upcoming</option>
@@ -143,8 +166,8 @@ export const ContestForm: React.FC<ContestFormProps> = ({ contest, onSave, onCan
             </select>
           </div>
         </div>
-        {dateError && (
-          <p className="text-sm text-red-600 font-medium">{dateError}</p>
+        {timeError && (
+          <p className="text-sm text-red-600 font-medium">{timeError}</p>
         )}
       </div>
 

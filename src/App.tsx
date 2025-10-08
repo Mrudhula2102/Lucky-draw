@@ -16,8 +16,6 @@ import Communication from './pages/Communication';
 import { Settings } from './pages/Settings';
 import { AdminManagement } from './pages/AdminManagement';
 
-// Import prize test utilities for development
-import './utils/prize-test';
 
 function App() {
   return (

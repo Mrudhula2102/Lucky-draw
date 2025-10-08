@@ -91,8 +91,8 @@ export const Contests: React.FC = () => {
             name: contest.name,
             theme: contest.theme || '',
             description: contest.description || '',
-            startDate: contest.start_date,
-            endDate: contest.end_date,
+            startTime: contest.start_time || '',
+            endTime: contest.end_time || '',
             status: contest.status as ContestStatus,
             prizes: contestPrizes.map((prize: any) => ({
               id: prize.prize_id.toString(),
@@ -124,8 +124,8 @@ export const Contests: React.FC = () => {
         name: 'Sample Contest (Demo)',
         theme: 'Demo',
         description: 'This is sample data - database connection needed',
-        startDate: '2025-09-15',
-        endDate: '2025-10-15',
+        startTime: '2025-09-15T10:00',
+        endTime: '2025-10-15T18:00',
         status: ContestStatus.ONGOING,
         prizes: [],
         entryRules: 'one entry',
@@ -145,12 +145,9 @@ export const Contests: React.FC = () => {
     try {
       console.log('Creating contest with data:', contestData);
       
-      // Ensure dates are in the correct format
-      const startDate = contestData.startDate ? new Date(contestData.startDate).toISOString().split('T')[0] : null;
-      const endDate = contestData.endDate ? new Date(contestData.endDate).toISOString().split('T')[0] : null;
-      
-      if (!startDate || !endDate) {
-        setError('Start date and end date are required');
+      // Ensure times are provided
+      if (!contestData.startTime || !contestData.endTime) {
+        setError('Start time and end time are required');
         return;
       }
       
@@ -158,8 +155,11 @@ export const Contests: React.FC = () => {
         name: contestData.name,
         theme: contestData.theme || null,
         description: contestData.description || null,
-        start_date: startDate,
-        end_date: endDate,
+        // Handle both old and new schema during transition
+        start_date: contestData.startTime ? contestData.startTime.split('T')[0] : new Date().toISOString().split('T')[0],
+        end_date: contestData.endTime ? contestData.endTime.split('T')[0] : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        start_time: contestData.startTime,
+        end_time: contestData.endTime,
         entry_rules: contestData.entryRules || null,
         status: contestData.status || 'UPCOMING',
       };
@@ -227,8 +227,8 @@ export const Contests: React.FC = () => {
         name: contestData.name,
         theme: contestData.theme,
         description: contestData.description,
-        start_date: contestData.startDate,
-        end_date: contestData.endDate,
+        start_time: contestData.startTime,
+        end_time: contestData.endTime,
         entry_rules: contestData.entryRules,
         status: contestData.status,
       });
@@ -286,14 +286,19 @@ export const Contests: React.FC = () => {
       render: (contest: Contest) => getStatusBadge(contest.status),
     },
     {
-      key: 'dates',
-      header: 'Duration',
-      render: (contest: Contest) => (
-        <div className="text-sm">
-          <p>{formatDate(contest.startDate, 'MMM dd, yyyy')}</p>
-          <p className="text-gray-500">to {formatDate(contest.endDate, 'MMM dd, yyyy')}</p>
-        </div>
-      ),
+      key: 'schedule',
+      header: 'Schedule',
+      render: (contest: Contest) => {
+        const startFormatted = formatDate(contest.startTime, 'MMM dd, yyyy HH:mm');
+        const endFormatted = formatDate(contest.endTime, 'MMM dd, yyyy HH:mm');
+        
+        return (
+          <div className="text-sm">
+            <p>{startFormatted}</p>
+            <p className="text-gray-500">to {endFormatted}</p>
+          </div>
+        );
+      },
     },
     {
       key: 'participants',

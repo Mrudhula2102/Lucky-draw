@@ -95,9 +95,9 @@ export class DatabaseService {
     const contests = await this.getAllContests();
     const now = new Date();
     return contests.filter(contest => {
-      const startDate = new Date(contest.start_date);
-      const endDate = new Date(contest.end_date);
-      return startDate <= now && endDate >= now && contest.status === 'ONGOING';
+      const startTime = new Date(contest.start_time);
+      const endTime = new Date(contest.end_time);
+      return startTime <= now && endTime >= now && contest.status === 'ONGOING';
     });
   }
 

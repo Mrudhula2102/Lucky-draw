@@ -28,8 +28,8 @@ export interface Contest {
   name: string;
   theme: string;
   description: string;
-  startDate: string;
-  endDate: string;
+  startTime: string; // Lucky draw start time (required)
+  endTime: string;   // Lucky draw end time (required)
   status: ContestStatus;
   prizes: Prize[];
   entryRules: string;
@@ -51,7 +51,9 @@ export enum ContestStatus {
 }
 
 export enum ParticipationMethod {
-  // Removed QR, WHATSAPP, MANUAL
+  ONLINE = 'ONLINE',
+  QR_CODE = 'QR_CODE',
+  MANUAL = 'MANUAL',
 }
 
 export interface Prize {

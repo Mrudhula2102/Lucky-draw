@@ -4,7 +4,7 @@ import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
 import { Contest, ContestStatus, ParticipationMethod } from '../../types';
 import { formatDate, formatNumber } from '../../utils/helpers';
-import { Calendar, Users, Award, Clock, FileText, CheckCircle } from 'lucide-react';
+import { Calendar, Users, Award, Clock, FileText, CheckCircle, Timer } from 'lucide-react';
 
 interface ContestDetailsModalProps {
   isOpen: boolean;
@@ -22,6 +22,27 @@ export const ContestDetailsModal: React.FC<ContestDetailsModalProps> = ({ isOpen
       [ContestStatus.CANCELLED]: 'danger',
     };
     return <Badge variant={variants[status]}>{status}</Badge>;
+  };
+
+  const formatDateTime = (dateTimeString: string | null | undefined) => {
+    if (!dateTimeString) return 'Not set';
+    try {
+      const date = new Date(dateTimeString);
+      if (isNaN(date.getTime())) {
+        return 'Invalid date';
+      }
+      return date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    } catch (error) {
+      console.warn('Error formatting datetime:', dateTimeString, error);
+      return 'Invalid date';
+    }
   };
 
   const getParticipationMethodLabel = (method: ParticipationMethod) => {
@@ -62,21 +83,27 @@ export const ContestDetailsModal: React.FC<ContestDetailsModalProps> = ({ isOpen
           <p className="text-gray-700 leading-relaxed">{contest.description}</p>
         </div>
 
-        {/* Date Information */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Calendar className="w-5 h-5 text-blue-600" />
-              <h4 className="font-semibold text-blue-900">Start Date</h4>
-            </div>
-            <p className="text-blue-800">{formatDate(contest.startDate)}</p>
+        {/* Lucky Draw Schedule */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Timer className="w-5 h-5 text-gray-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Lucky Draw Schedule</h3>
           </div>
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Clock className="w-5 h-5 text-purple-600" />
-              <h4 className="font-semibold text-purple-900">End Date</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Timer className="w-5 h-5 text-emerald-600" />
+                <h4 className="font-semibold text-emerald-900">Lucky Draw Starts</h4>
+              </div>
+              <p className="text-emerald-800 font-medium">{formatDateTime(contest.startTime)}</p>
             </div>
-            <p className="text-purple-800">{formatDate(contest.endDate)}</p>
+            <div className="bg-rose-50 border border-rose-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Clock className="w-5 h-5 text-rose-600" />
+                <h4 className="font-semibold text-rose-900">Lucky Draw Ends</h4>
+              </div>
+              <p className="text-rose-800 font-medium">{formatDateTime(contest.endTime)}</p>
+            </div>
           </div>
         </div>
 

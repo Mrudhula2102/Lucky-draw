@@ -67,17 +67,7 @@ export const Sidebar: React.FC = () => {
         </ul>
       </nav>
 
-      <div className="p-4 border-t border-gray-200">
-        <div className="bg-gradient-to-br from-primary-500 to-primary-700 rounded-lg p-4 text-white">
-          <h3 className="font-semibold mb-1">Need Help?</h3>
-          <p className="text-xs text-primary-100 mb-3">
-            Check our documentation for guides and tutorials
-          </p>
-          <button className="w-full bg-white text-primary-700 text-sm font-medium py-2 rounded-lg hover:bg-primary-50 transition-colors">
-            View Docs
-          </button>
-        </div>
-      </div>
+      
     </aside>
   );
 };

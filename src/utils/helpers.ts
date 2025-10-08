@@ -1,14 +1,34 @@
 import { format, formatDistance, parseISO } from 'date-fns';
 
 // Date formatting utilities
-export const formatDate = (date: string | Date, formatStr: string = 'PPP'): string => {
-  const dateObj = typeof date === 'string' ? parseISO(date) : date;
-  return format(dateObj, formatStr);
+export const formatDate = (date: string | Date | null | undefined, formatStr: string = 'PPP'): string => {
+  if (!date) return 'Not set';
+  
+  try {
+    const dateObj = typeof date === 'string' ? parseISO(date) : date;
+    if (isNaN(dateObj.getTime())) {
+      return 'Invalid date';
+    }
+    return format(dateObj, formatStr);
+  } catch (error) {
+    console.warn('Error formatting date:', date, error);
+    return 'Invalid date';
+  }
 };
 
-export const formatRelativeTime = (date: string | Date): string => {
-  const dateObj = typeof date === 'string' ? parseISO(date) : date;
-  return formatDistance(dateObj, new Date(), { addSuffix: true });
+export const formatRelativeTime = (date: string | Date | null | undefined): string => {
+  if (!date) return 'Not set';
+  
+  try {
+    const dateObj = typeof date === 'string' ? parseISO(date) : date;
+    if (isNaN(dateObj.getTime())) {
+      return 'Invalid date';
+    }
+    return formatDistance(dateObj, new Date(), { addSuffix: true });
+  } catch (error) {
+    console.warn('Error formatting relative time:', date, error);
+    return 'Invalid date';
+  }
 };
 
 // Number formatting utilities
