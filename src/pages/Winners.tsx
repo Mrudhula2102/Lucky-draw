@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Search, Filter, Download, Send, CheckCircle, Package, Truck } from 'lucide-react';
+import { Search, Filter, Download, Send, CheckCircle, Package, Truck, AlertTriangle, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
@@ -60,14 +61,17 @@ export const Winners: React.FC = () => {
         quantity: 1,
       },
       wonAt: '2025-09-25T15:30:00Z',
-      prizeStatus: PrizeStatus.DISPATCHED,
+      prizeStatus: PrizeStatus.CLAIMED,
       notificationSent: true,
-      dispatchedAt: '2025-09-26T10:00:00Z',
+      claimedAt: '2025-09-26T10:00:00Z',
     },
   ]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<PrizeStatus | 'ALL'>('ALL');
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [selectedWinner, setSelectedWinner] = useState<Winner | null>(null);
+  const [newStatus, setNewStatus] = useState<PrizeStatus | null>(null);
 
   const filteredWinners = winners.filter((winner) => {
     const matchesSearch =
@@ -143,23 +147,15 @@ export const Winners: React.FC = () => {
       header: 'Actions',
       render: (winner: Winner) => (
         <div className="flex items-center gap-2">
-          {!winner.notificationSent && (
+          {/* Status Toggle Button */}
+          {(winner.prizeStatus === PrizeStatus.PENDING || winner.prizeStatus === PrizeStatus.CLAIMED) && (
             <Button
               size="sm"
-              variant="primary"
-              icon={<Send className="w-3 h-3" />}
-              onClick={() => handleSendNotification(winner.id)}
+              variant={winner.prizeStatus === PrizeStatus.PENDING ? 'secondary' : 'success'}
+              onClick={() => handleStatusToggle(winner, winner.prizeStatus === PrizeStatus.PENDING ? PrizeStatus.CLAIMED : PrizeStatus.PENDING)}
+              className={winner.prizeStatus === PrizeStatus.PENDING ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-300' : ''}
             >
-              Notify
-            </Button>
-          )}
-          {winner.prizeStatus === PrizeStatus.PENDING && (
-            <Button
-              size="sm"
-              variant="success"
-              onClick={() => handleUpdateStatus(winner.id, PrizeStatus.DISPATCHED)}
-            >
-              Mark Dispatched
+              {winner.prizeStatus === PrizeStatus.PENDING ? 'Pending' : 'Claimed'}
             </Button>
           )}
         </div>
@@ -174,6 +170,33 @@ export const Winners: React.FC = () => {
       )
     );
     toast.success('Notification sent successfully!');
+  };
+
+  const handleStatusToggle = (winner: Winner, status: PrizeStatus) => {
+    setSelectedWinner(winner);
+    setNewStatus(status);
+    setShowConfirmModal(true);
+  };
+
+  const confirmStatusChange = () => {
+    if (!selectedWinner || !newStatus) return;
+
+    setWinners(
+      winners.map((w) =>
+        w.id === selectedWinner.id
+          ? {
+              ...w,
+              prizeStatus: newStatus,
+              claimedAt: newStatus === PrizeStatus.CLAIMED ? new Date().toISOString() : w.claimedAt,
+            }
+          : w
+      )
+    );
+    
+    toast.success(`Status updated to ${newStatus.toLowerCase()}!`);
+    setShowConfirmModal(false);
+    setSelectedWinner(null);
+    setNewStatus(null);
   };
 
   const handleUpdateStatus = (winnerId: string, status: PrizeStatus) => {
@@ -220,7 +243,7 @@ export const Winners: React.FC = () => {
   const stats = {
     total: winners.length,
     pending: winners.filter((w) => w.prizeStatus === PrizeStatus.PENDING).length,
-    dispatched: winners.filter((w) => w.prizeStatus === PrizeStatus.DISPATCHED).length,
+    claimed: winners.filter((w) => w.prizeStatus === PrizeStatus.CLAIMED).length,
     delivered: winners.filter((w) => w.prizeStatus === PrizeStatus.DELIVERED).length,
   };
 
@@ -266,8 +289,8 @@ export const Winners: React.FC = () => {
         </Card>
         <Card>
           <div className="text-center">
-            <p className="text-3xl font-bold text-blue-600">{stats.dispatched}</p>
-            <p className="text-sm text-gray-600 mt-1">Dispatched</p>
+            <p className="text-3xl font-bold text-green-600">{stats.claimed}</p>
+            <p className="text-sm text-gray-600 mt-1">Claimed</p>
           </div>
         </Card>
         <Card>
@@ -311,6 +334,84 @@ export const Winners: React.FC = () => {
       <Card>
         <Table data={filteredWinners} columns={columns} emptyMessage="No winners found" />
       </Card>
+
+      {/* Confirmation Modal */}
+      <AnimatePresence>
+        {showConfirmModal && selectedWinner && newStatus && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black bg-opacity-50 z-40"
+              onClick={() => setShowConfirmModal(false)}
+            />
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-white rounded-xl shadow-2xl w-full max-w-md"
+              >
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                  <h2 className="text-xl font-semibold text-gray-900">Confirm Status Change</h2>
+                  <button
+                    onClick={() => setShowConfirmModal(false)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="px-6 py-4">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                      <AlertTriangle className="w-6 h-6 text-yellow-600" />
+                    </div>
+                    <div className="flex-1 pt-1">
+                      <p className="text-gray-700 leading-relaxed mb-3">
+                        Are you sure you want to change the status for <strong>{selectedWinner.participant.name}</strong> from{' '}
+                        <span className={`font-semibold ${
+                          selectedWinner.prizeStatus === PrizeStatus.PENDING ? 'text-yellow-600' : 'text-green-600'
+                        }`}>
+                          {selectedWinner.prizeStatus}
+                        </span>{' '}
+                        to{' '}
+                        <span className={`font-semibold ${
+                          newStatus === PrizeStatus.PENDING ? 'text-yellow-600' : 'text-green-600'
+                        }`}>
+                          {newStatus}
+                        </span>?
+                      </p>
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <p className="text-sm text-gray-600">
+                          <strong>Prize:</strong> {selectedWinner.prize.name}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          <strong>Value:</strong> ₹{selectedWinner.prize.value.toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowConfirmModal(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={confirmStatusChange}
+                  >
+                    Confirm Change
+                  </Button>
+                </div>
+              </motion.div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, Edit, Trash2, Eye, QrCode } from 'lucide-react';
+import { Plus, Search, Filter, Edit, Eye, QrCode, Power, AlertTriangle, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
@@ -8,7 +9,7 @@ import { Table } from '../components/common/Table';
 import { Modal } from '../components/common/Modal';
 import { Contest, ContestStatus } from '../types';
 import { DatabaseService } from '../services/database';
-import { formatDate, formatNumber } from '../utils/helpers';
+import { formatNumber } from '../utils/helpers';
 import { ContestForm } from '../components/contests/ContestForm';
 import { QRCodeModal } from '../components/contests/QRCodeModal';
 import { ContestDetailsModal } from '../components/contests/ContestDetailsModal';
@@ -74,6 +75,126 @@ export const Contests: React.FC = () => {
     loadContests();
   }, []);
 
+  // Update contest statuses periodically
+  useEffect(() => {
+    if (contests.length === 0) return;
+    
+    console.log('🔄 Setting up automatic status updates...');
+    
+    // Update immediately when contests load
+    const checkAndUpdateStatuses = () => {
+      console.log('⏰ Running status check at:', new Date().toLocaleTimeString());
+      
+      setContests(prevContests => {
+        let hasChanges = false;
+        
+        const updatedContests = prevContests.map(contest => {
+          // Skip DRAFT and CANCELLED contests
+          if (contest.status === ContestStatus.DRAFT || contest.status === ContestStatus.CANCELLED) {
+            return contest;
+          }
+          
+          const { status, isActive } = getAutoStatus(contest.startTime, contest.endTime);
+          
+          console.log(`Checking "${contest.name}": current=${contest.status}, calculated=${status}`);
+          
+          // Only update if status or active state has changed
+          if (contest.status !== status || contest.isActive !== isActive) {
+            hasChanges = true;
+            console.log(`🔄 Auto-updating contest "${contest.name}" from ${contest.status} to ${status}, isActive: ${isActive}`);
+            
+            // Update in database asynchronously
+            const updatePayload = { status: status } as any;
+            console.log(`📤 Sending to database: contest_id=${contest.id}, payload=`, updatePayload);
+            
+            DatabaseService.updateContest(parseInt(contest.id), updatePayload)
+              .then((result) => {
+                console.log(`✅ Database updated successfully:`, result);
+              })
+              .catch(err => {
+                console.error('❌ Failed to auto-update contest status in database:', {
+                  contestId: contest.id,
+                  contestName: contest.name,
+                  attemptedStatus: status,
+                  error: err,
+                  errorMessage: err?.message,
+                  errorDetails: err?.details
+                });
+              });
+            
+            return { ...contest, status, isActive };
+          }
+          return contest;
+        });
+        
+        if (!hasChanges) {
+          console.log('✓ No status changes needed');
+        }
+        
+        return hasChanges ? updatedContests : prevContests;
+      });
+    };
+    
+    // Run immediately
+    checkAndUpdateStatuses();
+    
+    // Then run every 10 seconds for testing (change to 60000 for production)
+    const intervalId = setInterval(checkAndUpdateStatuses, 10000);
+    
+    return () => {
+      console.log('🛑 Stopping automatic status updates');
+      clearInterval(intervalId);
+    };
+  }, [contests.length]); // Re-run when contests are loaded
+
+
+  // Function to determine status and active state based on dates
+  const getAutoStatus = (startTime: string, endTime: string): { status: ContestStatus; isActive: boolean } => {
+    try {
+      // Validate input
+      if (!startTime || !endTime) {
+        return { status: ContestStatus.DRAFT, isActive: false };
+      }
+
+      // Get current local time in same format as stored times
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
+      const day = now.getDate().toString().padStart(2, '0');
+      const hours = now.getHours().toString().padStart(2, '0');
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      const nowString = `${year}-${month}-${day}T${hours}:${minutes}`; // "2025-10-08T13:44"
+      
+      // Compare strings directly (works because ISO format is sortable)
+      const startString = startTime.slice(0, 16);
+      const endString = endTime.slice(0, 16);
+
+      console.log('Status check:', {
+        now: nowString,
+        start: startString,
+        end: endString,
+        isBeforeStart: nowString < startString,
+        isBetween: nowString >= startString && nowString <= endString,
+        isAfterEnd: nowString > endString
+      });
+
+      if (nowString < startString) {
+        console.log('→ Status: UPCOMING');
+        return { status: ContestStatus.UPCOMING, isActive: false };
+      } else if (nowString >= startString && nowString <= endString) {
+        console.log('→ Status: ONGOING');
+        return { status: ContestStatus.ONGOING, isActive: true };
+      } else {
+        console.log('→ Status: COMPLETED');
+        return { status: ContestStatus.COMPLETED, isActive: false };
+      }
+    } catch (error) {
+      console.error('Error in getAutoStatus:', error);
+      return { status: ContestStatus.DRAFT, isActive: false };
+    }
+  };
+
+
   const loadContests = async () => {
     try {
       setLoading(true);
@@ -86,14 +207,28 @@ export const Contests: React.FC = () => {
           // Load prizes for this contest using our new service
           const contestPrizes = await DatabaseService.getPrizesByContest(contest.contest_id);
           
+          // Determine auto status based on dates
+          const startTime = contest.start_time || '';
+          const endTime = contest.end_time || '';
+          const { status: autoStatus, isActive: autoIsActive } = getAutoStatus(startTime, endTime);
+          
+          // Use auto-calculated status if contest is not manually set to DRAFT or CANCELLED
+          const finalStatus = (contest.status === 'DRAFT' || contest.status === 'CANCELLED') 
+            ? contest.status as ContestStatus
+            : autoStatus;
+          
+          const finalIsActive = (contest.status === 'DRAFT' || contest.status === 'CANCELLED')
+            ? false
+            : autoIsActive;
+          
           return {
             id: contest.contest_id.toString(),
             name: contest.name,
             theme: contest.theme || '',
             description: contest.description || '',
-            startTime: contest.start_time || '',
-            endTime: contest.end_time || '',
-            status: contest.status as ContestStatus,
+            startTime: startTime,
+            endTime: endTime,
+            status: finalStatus,
             prizes: contestPrizes.map((prize: any) => ({
               id: prize.prize_id.toString(),
               name: prize.prize_name,
@@ -110,6 +245,7 @@ export const Contests: React.FC = () => {
             createdAt: contest.created_at,
             updatedAt: contest.created_at,
             qrCodeUrl: contest.qr_code_url || undefined,
+            isActive: finalIsActive,
           };
         })
       );
@@ -135,6 +271,7 @@ export const Contests: React.FC = () => {
         createdBy: '1',
         createdAt: '2025-09-01',
         updatedAt: '2025-09-01',
+        isActive: true,
       }]);
     } finally {
       setLoading(false);
@@ -143,7 +280,7 @@ export const Contests: React.FC = () => {
 
   const handleCreateContest = async (contestData: any) => {
     try {
-      console.log('Creating contest with data:', contestData);
+      console.log('Creating contest with data (IST):', contestData);
       
       // Ensure times are provided
       if (!contestData.startTime || !contestData.endTime) {
@@ -151,18 +288,30 @@ export const Contests: React.FC = () => {
         return;
       }
       
-      const contestPayload = {
+      // Use times directly as entered
+      const startTime = contestData.startTime;
+      const endTime = contestData.endTime;
+      
+      console.log('Contest times:', { startTime, endTime });
+      
+      // Automatically determine status based on dates
+      const { status: autoStatus, isActive: autoIsActive } = getAutoStatus(startTime, endTime);
+      
+      const contestPayload: any = {
         name: contestData.name,
         theme: contestData.theme || null,
         description: contestData.description || null,
         // Handle both old and new schema during transition
-        start_date: contestData.startTime ? contestData.startTime.split('T')[0] : new Date().toISOString().split('T')[0],
-        end_date: contestData.endTime ? contestData.endTime.split('T')[0] : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        start_time: contestData.startTime,
-        end_time: contestData.endTime,
+        start_date: startTime ? startTime.split('T')[0] : new Date().toISOString().split('T')[0],
+        end_date: endTime ? endTime.split('T')[0] : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        start_time: startTime,
+        end_time: endTime,
         entry_rules: contestData.entryRules || null,
-        status: contestData.status || 'UPCOMING',
+        status: autoStatus, // Automatically set based on dates
       };
+      
+      // Don't include is_active in payload until column is added to database
+      // contestPayload.is_active = autoIsActive;
       
       console.log('Contest payload:', contestPayload);
       
@@ -213,9 +362,51 @@ export const Contests: React.FC = () => {
     try {
       await DatabaseService.deleteContest(parseInt(contestId));
       await loadContests(); // Reload after deletion
+      setShowDeleteModal(false);
+      setContestToDelete(null);
     } catch (err) {
       console.error('Error deleting contest:', err);
       setError('Failed to delete contest. Please try again.');
+    }
+  };
+
+  const handleToggleActive = async (contest: Contest) => {
+    try {
+      const newActiveStatus = !contest.isActive;
+      
+      // Update local state immediately for better UX
+      setContests(contests.map(c => 
+        c.id === contest.id ? { ...c, isActive: newActiveStatus } : c
+      ));
+      
+      // Try to update in database (will work if is_active column exists)
+      try {
+        await DatabaseService.updateContest(parseInt(contest.id), {
+          is_active: newActiveStatus
+        } as any);
+        
+        const statusText = newActiveStatus ? 'enabled' : 'disabled';
+        console.log(`Contest "${contest.name}" ${statusText} successfully`);
+        setError(null);
+      } catch (dbErr: any) {
+        // If database update fails, keep the local state change but warn user
+        console.warn('Database update failed (is_active column may not exist):', dbErr);
+        
+        // Check if it's a column not found error
+        if (dbErr?.message?.includes('is_active') || dbErr?.message?.includes('column')) {
+          console.warn('is_active column does not exist in database. Changes are local only and will not persist.');
+          // Don't show error to user - let them use the feature locally
+        } else {
+          // For other errors, revert the local change
+          setContests(contests.map(c => 
+            c.id === contest.id ? { ...c, isActive: !newActiveStatus } : c
+          ));
+          setError('Failed to update contest status in database.');
+        }
+      }
+    } catch (err) {
+      console.error('Error toggling contest status:', err);
+      setError('Failed to update contest status. Please try again.');
     }
   };
 
@@ -251,6 +442,8 @@ export const Contests: React.FC = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedContest, setSelectedContest] = useState<Contest | null>(null);
   const [editingContest, setEditingContest] = useState<Contest | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [contestToDelete, setContestToDelete] = useState<Contest | null>(null);
 
   const getStatusBadge = (status: ContestStatus) => {
     const variants: Record<ContestStatus, 'success' | 'warning' | 'info' | 'default' | 'danger'> = {
@@ -286,18 +479,61 @@ export const Contests: React.FC = () => {
       render: (contest: Contest) => getStatusBadge(contest.status),
     },
     {
+      key: 'active',
+      header: 'Active',
+      render: (contest: Contest) => (
+        <Badge variant={contest.isActive ? 'success' : 'default'} size="sm">
+          {contest.isActive ? 'Enabled' : 'Disabled'}
+        </Badge>
+      ),
+    },
+    {
       key: 'schedule',
       header: 'Schedule',
       render: (contest: Contest) => {
-        const startFormatted = formatDate(contest.startTime, 'MMM dd, yyyy HH:mm');
-        const endFormatted = formatDate(contest.endTime, 'MMM dd, yyyy HH:mm');
-        
-        return (
-          <div className="text-sm">
-            <p>{startFormatted}</p>
-            <p className="text-gray-500">to {endFormatted}</p>
-          </div>
-        );
+        try {
+          // Check if times are valid
+          if (!contest.startTime || !contest.endTime) {
+            return <span className="text-sm text-gray-400">No schedule set</span>;
+          }
+
+          // Parse time directly from string to avoid timezone conversion
+          const formatDateTime = (timeString: string) => {
+            try {
+              // Extract date and time parts from ISO string
+              // Format: "2025-10-08T13:00:00" or "2025-10-08T13:00:00.000Z"
+              const [datePart, timePart] = timeString.split('T');
+              const [year, month, day] = datePart.split('-');
+              const [hourMin] = timePart.split(':');
+              const hours24 = parseInt(hourMin);
+              const minutes = timePart.split(':')[1];
+              
+              // Convert to 12-hour format
+              const ampm = hours24 >= 12 ? 'PM' : 'AM';
+              let hours12 = hours24 % 12;
+              hours12 = hours12 ? hours12 : 12;
+              
+              // Format month
+              const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+              const monthName = monthNames[parseInt(month) - 1];
+              
+              return `${day} ${monthName} ${year}, ${hours12.toString().padStart(2, '0')}:${minutes} ${ampm}`;
+            } catch (error) {
+              console.error('Error parsing time:', timeString, error);
+              return 'Invalid time';
+            }
+          };
+          
+          return (
+            <div className="text-sm">
+              <p className="font-medium">{formatDateTime(contest.startTime)}</p>
+              <p className="text-gray-500">to {formatDateTime(contest.endTime)}</p>
+            </div>
+          );
+        } catch (error) {
+          console.error('Error formatting date:', error, contest);
+          return <span className="text-sm text-red-400">Date error</span>;
+        }
       },
     },
     {
@@ -341,11 +577,15 @@ export const Contests: React.FC = () => {
             <Edit className="w-4 h-4" />
           </button>
           <button
-            onClick={() => handleDelete(contest.id)}
-            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-            title="Delete"
+            onClick={() => handleToggleActive(contest)}
+            className={`p-2 rounded-lg transition-colors ${
+              contest.isActive 
+                ? 'text-green-600 hover:bg-green-50' 
+                : 'text-gray-600 hover:bg-gray-50'
+            }`}
+            title={contest.isActive ? 'Disable Contest' : 'Enable Contest'}
           >
-            <Trash2 className="w-4 h-4" />
+            <Power className="w-4 h-4" />
           </button>
         </div>
       ),
@@ -367,9 +607,9 @@ export const Contests: React.FC = () => {
     setShowCreateModal(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this contest?')) {
-      await handleDeleteContest(id);
+  const confirmDelete = async () => {
+    if (contestToDelete) {
+      await handleDeleteContest(contestToDelete.id);
     }
   };
 
@@ -500,6 +740,73 @@ export const Contests: React.FC = () => {
           contest={selectedContest}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteModal && contestToDelete && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black bg-opacity-50 z-40"
+              onClick={() => setShowDeleteModal(false)}
+            />
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-white rounded-xl shadow-2xl w-full max-w-md"
+              >
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                  <h2 className="text-xl font-semibold text-gray-900">Confirm Deletion</h2>
+                  <button
+                    onClick={() => setShowDeleteModal(false)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="px-6 py-4">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                      <AlertTriangle className="w-6 h-6 text-red-600" />
+                    </div>
+                    <div className="flex-1 pt-1">
+                      <p className="text-gray-700 leading-relaxed mb-3">
+                        Are you sure you want to delete the contest <strong>"{contestToDelete.name}"</strong>?
+                      </p>
+                      <div className="bg-red-50 p-3 rounded-lg border border-red-200">
+                        <p className="text-sm text-red-700 font-medium">
+                          ⚠️ This action cannot be undone.
+                        </p>
+                        <p className="text-sm text-red-600 mt-1">
+                          All associated data including participants, prizes, and results will be permanently deleted.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowDeleteModal(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="danger"
+                    onClick={confirmDelete}
+                  >
+                    Delete Contest
+                  </Button>
+                </div>
+              </motion.div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

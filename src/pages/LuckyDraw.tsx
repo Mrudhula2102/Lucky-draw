@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Play, RotateCcw, Users, Award } from 'lucide-react';
+import { Sparkles, Play, RotateCcw, Users, Award, AlertTriangle, X } from 'lucide-react';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Badge } from '../components/common/Badge';
@@ -34,6 +34,7 @@ export const LuckyDraw: React.FC = () => {
   const [showAnimation, setShowAnimation] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // Load contests on mount
   useEffect(() => {
@@ -99,7 +100,7 @@ export const LuckyDraw: React.FC = () => {
     }
   };
 
-  const handleDraw = async () => {
+  const handleDrawClick = () => {
     if (!selectedContest) {
       toast.error('Please select a contest');
       return;
@@ -119,6 +120,14 @@ export const LuckyDraw: React.FC = () => {
       toast.error('Number of winners cannot exceed number of participants');
       return;
     }
+
+    // Show confirmation modal
+    setShowConfirmModal(true);
+  };
+
+  const handleDraw = async () => {
+    // Close the confirmation modal
+    setShowConfirmModal(false);
 
     setIsDrawing(true);
     setShowAnimation(true);
@@ -306,7 +315,7 @@ export const LuckyDraw: React.FC = () => {
                 <Button
                   variant="primary"
                   icon={<Play className="w-5 h-5" />}
-                  onClick={handleDraw}
+                  onClick={handleDrawClick}
                   loading={isDrawing}
                   disabled={!selectedContest || !selectedPrize}
                   className="flex-1"
@@ -454,6 +463,65 @@ export const LuckyDraw: React.FC = () => {
           </Card>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      <AnimatePresence>
+        {showConfirmModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black bg-opacity-50 z-40"
+              onClick={() => setShowConfirmModal(false)}
+            />
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="bg-white rounded-xl shadow-2xl w-full max-w-md"
+              >
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                  <h2 className="text-xl font-semibold text-gray-900">Confirm Draw Start</h2>
+                  <button
+                    onClick={() => setShowConfirmModal(false)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="px-6 py-4">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                      <AlertTriangle className="w-6 h-6 text-yellow-600" />
+                    </div>
+                    <div className="flex-1 pt-1">
+                      <p className="text-gray-700 leading-relaxed">
+                        Once the draw starts, it cannot be undone. Do you want to proceed?
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowConfirmModal(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={handleDraw}
+                  >
+                    Confirm
+                  </Button>
+                </div>
+              </motion.div>
+            </div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

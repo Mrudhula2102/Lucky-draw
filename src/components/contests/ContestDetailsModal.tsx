@@ -4,7 +4,7 @@ import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
 import { Contest, ContestStatus, ParticipationMethod } from '../../types';
 import { formatDate, formatNumber } from '../../utils/helpers';
-import { Calendar, Users, Award, Clock, FileText, CheckCircle, Timer } from 'lucide-react';
+import { Users, Award, Clock, FileText, CheckCircle, Timer } from 'lucide-react';
 
 interface ContestDetailsModalProps {
   isOpen: boolean;
@@ -31,14 +31,20 @@ export const ContestDetailsModal: React.FC<ContestDetailsModalProps> = ({ isOpen
       if (isNaN(date.getTime())) {
         return 'Invalid date';
       }
-      return date.toLocaleString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-      });
+      
+      // Display time exactly as stored in database (no conversion)
+      // Format as: DD MMM YYYY, HH:MM AM/PM
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = date.toLocaleString('en-IN', { month: 'short' });
+      const year = date.getFullYear();
+      let hours = date.getHours();
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12; // 0 should be 12
+      const hoursStr = hours.toString().padStart(2, '0');
+      
+      return `${day} ${month} ${year}, ${hoursStr}:${minutes} ${ampm}`;
     } catch (error) {
       console.warn('Error formatting datetime:', dateTimeString, error);
       return 'Invalid date';

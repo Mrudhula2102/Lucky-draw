@@ -40,6 +40,7 @@ export interface Contest {
   createdAt: string;
   updatedAt: string;
   qrCodeUrl?: string; // URL for QR code participation
+  isActive?: boolean; // Whether the contest is active/enabled
 }
 
 export enum ContestStatus {
