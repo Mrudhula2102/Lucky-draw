@@ -372,6 +372,13 @@ export const Contests: React.FC = () => {
 
   const handleToggleActive = async (contest: Contest) => {
     try {
+      // Prevent toggling completed contests
+      if (contest.status === ContestStatus.COMPLETED) {
+        console.warn('Cannot toggle completed contest');
+        setError('Cannot enable/disable a completed contest');
+        return;
+      }
+      
       const newActiveStatus = !contest.isActive;
       
       let newStatus = contest.status;
@@ -379,6 +386,14 @@ export const Contests: React.FC = () => {
       if (newActiveStatus) {
         // Enabling: Calculate status based on current date/time
         const { status: calculatedStatus } = getAutoStatus(contest.startTime, contest.endTime);
+        
+        // Don't allow enabling if the calculated status is COMPLETED
+        if (calculatedStatus === ContestStatus.COMPLETED) {
+          console.warn('Cannot enable contest - it has already ended');
+          setError('Cannot enable a contest that has already ended');
+          return;
+        }
+        
         newStatus = calculatedStatus;
         console.log(`🟢 Enabling contest "${contest.name}" - Status will be: ${newStatus}`);
       } else {
@@ -585,12 +600,21 @@ export const Contests: React.FC = () => {
           </button>
           <button
             onClick={() => handleToggleActive(contest)}
+            disabled={contest.status === ContestStatus.COMPLETED}
             className={`p-2 rounded-lg transition-colors ${
-              contest.isActive 
-                ? 'text-green-600 hover:bg-green-50' 
-                : 'text-gray-600 hover:bg-gray-50'
+              contest.status === ContestStatus.COMPLETED
+                ? 'text-gray-400 cursor-not-allowed opacity-50'
+                : contest.isActive 
+                  ? 'text-green-600 hover:bg-green-50' 
+                  : 'text-gray-600 hover:bg-gray-50'
             }`}
-            title={contest.isActive ? 'Disable Contest' : 'Enable Contest'}
+            title={
+              contest.status === ContestStatus.COMPLETED 
+                ? 'Cannot toggle completed contest' 
+                : contest.isActive 
+                  ? 'Disable Contest' 
+                  : 'Enable Contest'
+            }
           >
             <Power className="w-4 h-4" />
           </button>

@@ -262,8 +262,8 @@ export const Analytics: React.FC = () => {
                   <p className="text-sm text-gray-600">{formatNumber(contest.participants)} participants</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">{contest.participants}</p>
-                   <p className="text-xs text-gray-500">Participants</p>
+                  {/* <p className="text-sm font-medium text-gray-900">{contest.participants}</p> */}
+                   {/* <p className="text-xs text-gray-500">Participants</p> */}
                 </div>
                 <div className="ml-4">
                   <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
