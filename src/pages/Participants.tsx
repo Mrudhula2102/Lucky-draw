@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Filter, Download, Upload, UserX, CheckCircle, XCircle } from 'lucide-react';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
@@ -9,8 +9,10 @@ import { Participant, ParticipationMethod } from '../types';
 import { formatDate, downloadCSV } from '../utils/helpers';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
+import { useLocation } from 'react-router-dom';
 
 export const Participants: React.FC = () => {
+  const location = useLocation();
   const [participants, setParticipants] = useState<Participant[]>([
     {
       id: '1',
@@ -56,6 +58,32 @@ export const Participants: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterValid, setFilterValid] = useState<'ALL' | 'VALID' | 'INVALID'>('ALL');
   const [selectedContest, setSelectedContest] = useState<string>('ALL');
+  const [highlightedParticipantId, setHighlightedParticipantId] = useState<string | null>(null);
+
+  // Handle search navigation - highlight searched participant
+  useEffect(() => {
+    const state = location.state as any;
+    if (state?.searchedParticipantId && participants.length > 0) {
+      const participantId = state.searchedParticipantId.toString();
+      setHighlightedParticipantId(participantId);
+      
+      // Scroll to the participant after a short delay
+      setTimeout(() => {
+        const element = document.getElementById(`participant-${participantId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 300);
+      
+      // Clear highlight after 3 seconds
+      setTimeout(() => {
+        setHighlightedParticipantId(null);
+      }, 3000);
+      
+      // Clear the state
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, participants]);
 
   const filteredParticipants = participants.filter((participant) => {
     const matchesSearch =

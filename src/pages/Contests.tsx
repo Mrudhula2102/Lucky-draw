@@ -15,6 +15,7 @@ import { QRCodeModal } from '../components/contests/QRCodeModal';
 import { ContestDetailsModal } from '../components/contests/ContestDetailsModal';
 import QRCode from 'qrcode';
 import { supabase } from '../lib/supabase-db';
+import { useLocation } from 'react-router-dom';
 
 // Function to generate QR code and upload to Supabase Storage
 const generateAndUploadQRCode = async (contestId: number, contestName: string): Promise<string> => {
@@ -66,14 +67,39 @@ const generateAndUploadQRCode = async (contestId: number, contestName: string): 
 };
 
 export const Contests: React.FC = () => {
+  const location = useLocation();
   const [contests, setContests] = useState<Contest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string>('ALL');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [selectedContest, setSelectedContest] = useState<Contest | null>(null);
+  const [editingContest, setEditingContest] = useState<Contest | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [contestToDelete, setContestToDelete] = useState<Contest | null>(null);
 
   // Load contests from Supabase
   useEffect(() => {
     loadContests();
   }, []);
+
+  // Handle search navigation - open details modal for searched contest
+  useEffect(() => {
+    const state = location.state as any;
+    if (state?.searchedContestId && contests.length > 0) {
+      const contest = contests.find(c => c.id === state.searchedContestId.toString());
+      if (contest) {
+        // Open the details modal for the searched contest
+        setSelectedContest(contest);
+        setShowDetailsModal(true);
+        // Clear the state
+        window.history.replaceState({}, document.title);
+      }
+    }
+  }, [location.state, contests]);
 
   // Update contest statuses periodically
   useEffect(() => {
@@ -455,17 +481,6 @@ export const Contests: React.FC = () => {
       setError('Failed to update contest. Please try again.');
     }
   };
-
-
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string>('ALL');
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showQRModal, setShowQRModal] = useState(false);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [selectedContest, setSelectedContest] = useState<Contest | null>(null);
-  const [editingContest, setEditingContest] = useState<Contest | null>(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [contestToDelete, setContestToDelete] = useState<Contest | null>(null);
 
   const getStatusBadge = (status: ContestStatus) => {
     const variants: Record<ContestStatus, 'success' | 'warning' | 'info' | 'default' | 'danger'> = {
