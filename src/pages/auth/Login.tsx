@@ -126,9 +126,6 @@ export const Login: React.FC = () => {
                 />
                 <span className="ml-2 text-sm text-gray-600">Remember me</span>
               </label>
-              <a href="#" className="text-sm text-primary-600 hover:text-primary-700">
-                Forgot password?
-              </a>
             </div>
 
             <Button type="submit" variant="primary" className="w-full" loading={loading}>

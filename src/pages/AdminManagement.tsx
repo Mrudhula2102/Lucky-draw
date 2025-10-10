@@ -45,6 +45,8 @@ export const AdminManagement: React.FC = () => {
   const [selectedAdmin, setSelectedAdmin] = useState<AdminWithStats | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [adminToDelete, setAdminToDelete] = useState<AdminWithStats | null>(null);
   const [activityFilter, setActivityFilter] = useState({
     adminId: '',
     action: '',
@@ -209,26 +211,8 @@ export const AdminManagement: React.FC = () => {
           toast.success(`${admin.isLocked ? 'Unlocked' : 'Locked'} ${admin.name}`);
           break;
         case 'delete':
-          if (window.confirm(`Are you sure you want to delete ${admin.name}?`)) {
-            await AdminService.deleteAdmin(admin.admin_id);
-            
-            // Log the admin deletion activity
-            try {
-              await AdminService.logActivity(
-                1, // Current admin ID (you should get this from auth context)
-                'DELETE_ADMIN',
-                'admins',
-                admin.admin_id,
-                undefined,
-                'SUCCESS'
-              );
-            } catch (logError) {
-              console.warn('Failed to log activity:', logError);
-            }
-            
-            toast.success(`Deleted ${admin.name}`);
-            await loadData();
-          }
+          setAdminToDelete(admin);
+          setShowDeleteModal(true);
           break;
       }
     } catch (error) {
@@ -237,10 +221,46 @@ export const AdminManagement: React.FC = () => {
     }
   };
 
+  const confirmDeleteAdmin = async () => {
+    if (!adminToDelete) return;
+
+    try {
+      await AdminService.deleteAdmin(adminToDelete.admin_id);
+      
+      // Log the admin deletion activity
+      try {
+        await AdminService.logActivity(
+          1, // Current admin ID (you should get this from auth context)
+          'DELETE_ADMIN',
+          'admins',
+          adminToDelete.admin_id,
+          undefined,
+          'SUCCESS'
+        );
+      } catch (logError) {
+        console.warn('Failed to log activity:', logError);
+      }
+      
+      toast.success(`Deleted ${adminToDelete.name}`);
+      setShowDeleteModal(false);
+      setAdminToDelete(null);
+      await loadData();
+    } catch (error) {
+      console.error('Error deleting admin:', error);
+      toast.error('Failed to delete admin');
+    }
+  };
+
   const handleCreateAdmin = async () => {
     try {
       if (!formData.name || !formData.email || !formData.password) {
         toast.error('Please fill in all required fields');
+        return;
+      }
+
+      // Check admin limit - Maximum 5 admins allowed
+      if (admins.length >= 5) {
+        toast.error('Maximum limit reached! Only 5 admins can be created.');
         return;
       }
 
@@ -471,15 +491,15 @@ export const AdminManagement: React.FC = () => {
       change: '+24%',
       changeType: 'increase',
     },
-    {
-      title: '2FA Enabled',
-      value: summaryStats.twoFactorEnabled,
-      icon: <Lock className="w-6 h-6" />,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
-      change: '+15%',
-      changeType: 'increase',
-    },
+    // {
+    //   title: '2FA Enabled',
+    //   value: summaryStats.twoFactorEnabled,
+    //   icon: <Lock className="w-6 h-6" />,
+    //   color: 'text-purple-600',
+    //   bgColor: 'bg-purple-50',
+    //   change: '+15%',
+    //   changeType: 'increase',
+    // },
   ];
 
   const tabs = [
@@ -504,7 +524,16 @@ export const AdminManagement: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Admin Management</h1>
-          <p className="text-gray-600">Manage admin users, roles, and permissions</p>
+          <p className="text-gray-600">
+            Manage admin users, roles, and permissions 
+            <span className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
+              admins.length >= 5 
+                ? 'bg-red-100 text-red-800' 
+                : 'bg-blue-100 text-blue-800'
+            }`}>
+              {admins.length}/5 Admins
+            </span>
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -515,11 +544,23 @@ export const AdminManagement: React.FC = () => {
             Refresh
           </button>
           <button
-            onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            onClick={() => {
+              if (admins.length >= 5) {
+                toast.error('Maximum limit reached! Only 5 admins allowed.');
+                return;
+              }
+              setShowCreateModal(true);
+            }}
+            disabled={admins.length >= 5}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              admins.length >= 5
+                ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+            title={admins.length >= 5 ? 'Maximum 5 admins allowed' : 'Add new admin'}
           >
             <Plus className="w-4 h-4" />
-            Add Admin
+            Add Admin {admins.length >= 5 && `(${admins.length}/5)`}
           </button>
         </div>
       </div>
@@ -616,9 +657,9 @@ export const AdminManagement: React.FC = () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Role
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         2FA
-                      </th>
+                      </th> */}
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Last Login
                       </th>
@@ -936,6 +977,21 @@ export const AdminManagement: React.FC = () => {
           <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Create New Admin</h3>
             
+            {/* Admin Limit Warning */}
+            <div className={`mb-4 p-3 rounded-lg flex items-center gap-2 ${
+              admins.length >= 4 
+                ? 'bg-yellow-50 border border-yellow-200' 
+                : 'bg-blue-50 border border-blue-200'
+            }`}>
+              <Shield className={`w-5 h-5 ${admins.length >= 4 ? 'text-yellow-600' : 'text-blue-600'}`} />
+              <p className={`text-sm ${admins.length >= 4 ? 'text-yellow-800' : 'text-blue-800'}`}>
+                {admins.length >= 4 
+                  ? `⚠️ Warning: ${5 - admins.length} admin slot${5 - admins.length === 1 ? '' : 's'} remaining!`
+                  : `${admins.length}/5 admins created. ${5 - admins.length} slot${5 - admins.length === 1 ? '' : 's'} available.`
+                }
+              </p>
+            </div>
+            
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
@@ -994,7 +1050,7 @@ export const AdminManagement: React.FC = () => {
                 </p>
               </div> */}
               
-              <div className="flex items-center">
+              {/* <div className="flex items-center">
                 <input
                   type="checkbox"
                   id="two_factor"
@@ -1005,7 +1061,7 @@ export const AdminManagement: React.FC = () => {
                 <label htmlFor="two_factor" className="ml-2 block text-sm text-gray-900">
                   Enable Two-Factor Authentication
                 </label>
-              </div>
+              </div> */}
             </div>
             
             <div className="flex justify-end gap-3 mt-6">
@@ -1111,18 +1167,18 @@ export const AdminManagement: React.FC = () => {
                 </p>
               </div> */}
               
-              <div className="flex items-center">
+              {/* <div className="flex items-center">
                 <input
                   type="checkbox"
                   id="edit_two_factor"
                   checked={formData.two_factor}
                   onChange={(e) => setFormData(prev => ({ ...prev, two_factor: e.target.checked }))}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="edit_two_factor" className="ml-2 block text-sm text-gray-900">
+                /> */}
+                {/* <label htmlFor="edit_two_factor" className="ml-2 block text-sm text-gray-900">
                   Enable Two-Factor Authentication
-                </label>
-              </div>
+                </label> */}
+              {/* </div> */}
             </div>
             
             <div className="flex justify-end gap-3 mt-6">
@@ -1159,6 +1215,79 @@ export const AdminManagement: React.FC = () => {
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Update Admin
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && adminToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 shadow-2xl">
+            {/* Icon */}
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+                <Trash2 className="w-8 h-8 text-red-600" />
+              </div>
+            </div>
+
+            {/* Title */}
+            <h3 className="text-xl font-bold text-gray-900 text-center mb-2">
+              Delete Admin
+            </h3>
+
+            {/* Message */}
+            <p className="text-gray-600 text-center mb-6">
+              Are you sure you want to delete{' '}
+              <span className="font-semibold text-gray-900">{adminToDelete.name}</span>?
+              <br />
+              <span className="text-sm text-red-600 mt-2 block">
+                This action cannot be undone.
+              </span>
+            </p>
+
+            {/* Admin Info Card */}
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Users className="w-5 h-5 text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900">{adminToDelete.name}</p>
+                  <p className="text-sm text-gray-600">{adminToDelete.email}</p>
+                </div>
+                <div>
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                    adminToDelete.role === 'SUPERADMIN' 
+                      ? 'bg-purple-100 text-purple-800' 
+                      : adminToDelete.role === 'ADMIN'
+                      ? 'bg-blue-100 text-blue-800'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {adminToDelete.role}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setAdminToDelete(null);
+                }}
+                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteAdmin}
+                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Admin
               </button>
             </div>
           </div>

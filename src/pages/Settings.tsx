@@ -314,7 +314,7 @@ export const Settings: React.FC = () => {
                   required
                 />
 
-                <label className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer">
+                {/* <label className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer">
                   <div>
                     <p className="font-medium text-gray-900">Require Two-Factor Authentication</p>
                     <p className="text-sm text-gray-600">
@@ -332,7 +332,7 @@ export const Settings: React.FC = () => {
                     }
                     className="w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
                   />
-                </label>
+                </label> */}
 
                 <div className="flex justify-end pt-4">
                   <Button type="submit" variant="primary" icon={<Save className="w-5 h-5" />}>

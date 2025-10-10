@@ -103,15 +103,15 @@ export const Users: React.FC = () => {
       header: 'Role',
       render: (admin: Admin) => getRoleBadge(admin.role),
     },
-    {
-      key: 'twoFactor',
-      header: '2FA',
-      render: (admin: Admin) => (
-        <Badge variant={admin.two_factor ? 'success' : 'default'} size="sm">
-          {admin.two_factor ? 'Enabled' : 'Disabled'}
-        </Badge>
-      ),
-    },
+    // {
+    //   key: 'twoFactor',
+    //   header: '2FA',
+    //   render: (admin: Admin) => (
+    //     <Badge variant={admin.two_factor ? 'success' : 'default'} size="sm">
+    //       {admin.two_factor ? 'Enabled' : 'Disabled'}
+    //     </Badge>
+    //   ),
+    // },
     {
       key: 'lastLogin',
       header: 'Last Login',
@@ -554,7 +554,7 @@ export const Users: React.FC = () => {
             </p>
           </div>
 
-          <label className="flex items-center gap-2 cursor-pointer">
+          {/* <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
               checked={adminForm.twoFactor}
@@ -564,7 +564,7 @@ export const Users: React.FC = () => {
               className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
             />
             <span className="text-sm text-gray-700">Enable Two-Factor Authentication</span>
-          </label>
+          </label> */}
 
           <div className="flex justify-end gap-3 pt-4">
             <Button
