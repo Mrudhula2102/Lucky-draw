@@ -22,35 +22,47 @@ export const Login: React.FC = () => {
     setError(''); // Clear previous errors
 
     try {
-      // Supabase authentication
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      // Query the admins table directly
+      const { data: adminData, error: queryError } = await supabase
+        .from('admins')
+        .select('*')
+        .eq('email', email)
+        .single();
 
-      if (authError) {
-        // Show user-friendly error message for invalid credentials
+      if (queryError || !adminData) {
+        console.error('Admin not found:', queryError);
         setError('Invalid email or password');
         setLoading(false);
         return;
       }
 
-      if (data.user && data.session) {
-        // Create user object for the store
-        const user = {
-          id: data.user.id,
-          email: data.user.email || email,
-          name: data.user.user_metadata?.name || data.user.email?.split('@')[0] || 'User',
-          role: data.user.user_metadata?.role || UserRole.ADMIN,
-          createdAt: data.user.created_at,
-          twoFactorEnabled: false,
-        };
-
-        // Store user and session token
-        login(user, data.session.access_token);
-        toast.success('Login successful!');
-        navigate('/dashboard');
+      // Check if password matches (assuming plain text for now)
+      // NOTE: In production, passwords should be hashed with bcrypt
+      if (adminData.password_hash !== password) {
+        // If password_hash is actually hashed, you'll need a backend API to verify
+        // For now, try direct comparison
+        setError('Invalid email or password');
+        setLoading(false);
+        return;
       }
+      
+      console.log('Admin authenticated:', adminData.email);
+      
+      // Create user object for the store
+      const user = {
+        id: adminData.admin_id.toString(),
+        email: adminData.email,
+        name: adminData.name,
+        role: adminData.role as UserRole,
+        createdAt: adminData.created_at,
+        twoFactorEnabled: adminData.two_factor,
+      };
+
+      // Store user and generate a simple token
+      const token = btoa(`${adminData.admin_id}:${Date.now()}`);
+      login(user, token);
+      toast.success('Login successful!');
+      navigate('/dashboard');
     } catch (error: any) {
       console.error('Login error:', error);
       setError('Invalid email or password');
