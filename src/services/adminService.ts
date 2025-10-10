@@ -7,10 +7,25 @@ export interface Admin {
   email: string;
   password_hash: string;
   role: 'ADMIN' | 'SUPERADMIN' | 'MODERATOR';
+  custom_role?: string | null;
+  permissions?: PagePermissions | null;
   two_factor: boolean;
   created_at: string;
   last_login?: string | null;
 }
+
+export interface PagePermissions {
+  dashboard?: PermissionLevel[];
+  contests?: PermissionLevel[];
+  participants?: PermissionLevel[];
+  draw?: PermissionLevel[];
+  winners?: PermissionLevel[];
+  communication?: PermissionLevel[];
+  analytics?: PermissionLevel[];
+  settings?: PermissionLevel[];
+}
+
+export type PermissionLevel = 'read' | 'write' | 'update';
 
 export interface AdminActivityLog {
   log_id: number;
@@ -214,5 +229,55 @@ export class AdminService {
       messagesSent: messages.count || 0,
       activitiesLogged: activities.count || 0,
     };
+  }
+
+  // Update admin permissions
+  static async updateAdminPermissions(
+    adminId: number,
+    permissions: PagePermissions
+  ): Promise<Admin> {
+    const { data, error } = await supabase
+      .from('admins')
+      .update({
+        permissions: permissions,
+      })
+      .eq('admin_id', adminId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  // Get admin permissions
+  static async getAdminPermissions(adminId: number): Promise<PagePermissions> {
+    const { data, error } = await supabase
+      .from('admins')
+      .select('permissions')
+      .eq('admin_id', adminId)
+      .single();
+
+    if (error) throw error;
+    
+    return data.permissions || {};
+  }
+
+  // Check if admin has specific permission for a page
+  static async hasPagePermission(
+    adminId: number,
+    page: keyof PagePermissions,
+    requiredLevel: PermissionLevel
+  ): Promise<boolean> {
+    const admin = await this.getAdminById(adminId);
+    if (!admin) return false;
+
+    // Super admins have all permissions
+    if (admin.role === 'SUPERADMIN') return true;
+
+    const permissions = admin.permissions || {};
+    const pagePermissions = permissions[page] || [];
+
+    // Check if the required permission is in the array
+    return pagePermissions.includes(requiredLevel);
   }
 }

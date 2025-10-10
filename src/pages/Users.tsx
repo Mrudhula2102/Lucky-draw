@@ -32,6 +32,17 @@ export const Users: React.FC = () => {
     email: '',
     passwordHash: '', // In real app, this would be handled securely
     role: 'MODERATOR' as 'ADMIN' | 'SUPERADMIN' | 'MODERATOR',
+    customRole: '',
+    permissions: {
+      dashboard: ['read'] as ('read' | 'write' | 'update')[],
+      contests: [] as ('read' | 'write' | 'update')[],
+      participants: [] as ('read' | 'write' | 'update')[],
+      draw: [] as ('read' | 'write' | 'update')[],
+      winners: [] as ('read' | 'write' | 'update')[],
+      communication: [] as ('read' | 'write' | 'update')[],
+      analytics: [] as ('read' | 'write' | 'update')[],
+      settings: [] as ('read' | 'write' | 'update')[],
+    },
     twoFactor: false,
   });
 
@@ -183,6 +194,17 @@ export const Users: React.FC = () => {
       email: admin.email,
       passwordHash: '', // Don't pre-fill password
       role: admin.role,
+      customRole: admin.custom_role || '',
+      permissions: {
+        dashboard: admin.permissions?.dashboard || ['read'],
+        contests: admin.permissions?.contests || [],
+        participants: admin.permissions?.participants || [],
+        draw: admin.permissions?.draw || [],
+        winners: admin.permissions?.winners || [],
+        communication: admin.permissions?.communication || [],
+        analytics: admin.permissions?.analytics || [],
+        settings: admin.permissions?.settings || [],
+      },
       twoFactor: admin.two_factor,
     });
     setShowCreateModal(true);
@@ -218,6 +240,8 @@ export const Users: React.FC = () => {
           name: adminForm.name,
           email: adminForm.email,
           role: adminForm.role,
+          // custom_role: adminForm.customRole || null, // COMMENTED OUT - Run ADD_CUSTOM_ROLE_COLUMN.sql first
+          // permissions: adminForm.permissions, // COMMENTED OUT - Permissions disabled
           two_factor: adminForm.twoFactor,
         };
         
@@ -240,6 +264,8 @@ export const Users: React.FC = () => {
           email: adminForm.email,
           password_hash: adminForm.passwordHash, // In real app, hash this
           role: adminForm.role,
+          // custom_role: adminForm.customRole || null, // COMMENTED OUT - Run ADD_CUSTOM_ROLE_COLUMN.sql first
+          // permissions: adminForm.permissions, // COMMENTED OUT - Permissions disabled
           two_factor: adminForm.twoFactor,
         });
         toast.success('Admin created successfully!');
@@ -252,6 +278,17 @@ export const Users: React.FC = () => {
         email: '',
         passwordHash: '',
         role: 'MODERATOR',
+        customRole: '',
+        permissions: {
+          dashboard: ['read'],
+          contests: [],
+          participants: [],
+          draw: [],
+          winners: [],
+          communication: [],
+          analytics: [],
+          settings: [],
+        },
         twoFactor: false,
       });
       await loadData();
@@ -291,6 +328,17 @@ export const Users: React.FC = () => {
               email: '',
               passwordHash: '',
               role: 'MODERATOR',
+              customRole: '',
+              permissions: {
+                dashboard: ['read'],
+                contests: [],
+                participants: [],
+                draw: [],
+                winners: [],
+                communication: [],
+                analytics: [],
+                settings: [],
+              },
               twoFactor: false,
             });
             setShowCreateModal(true);
@@ -415,17 +463,95 @@ export const Users: React.FC = () => {
             placeholder={editingAdmin ? "Leave blank to keep current password" : "Enter password"}
           />
 
+          <Input
+            label="Role"
+            value={adminForm.customRole}
+            onChange={(e) => setAdminForm({ ...adminForm, customRole: e.target.value })}
+            placeholder="e.g., Event Manager, Data Analyst, Contest Moderator"
+            required
+          />
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-            <select
-              value={adminForm.role}
-              onChange={(e) => setAdminForm({ ...adminForm, role: e.target.value as 'ADMIN' | 'SUPERADMIN' | 'MODERATOR' })}
-              className="input-field"
-            >
-              <option value="SUPERADMIN">Super Admin</option>
-              <option value="ADMIN">Admin</option>
-              <option value="MODERATOR">Moderator</option>
-            </select>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Page Permissions</label>
+            <div className="space-y-3 bg-gray-50 p-4 rounded-lg max-h-64 overflow-y-auto border border-gray-200">
+              {[
+                { key: 'dashboard', label: 'Dashboard', icon: '📊' },
+                { key: 'contests', label: 'Contest Management', icon: '🏆' },
+                { key: 'participants', label: 'Participant Management', icon: '👥' },
+                { key: 'draw', label: 'Lucky Draw', icon: '🎲' },
+                { key: 'winners', label: 'Winners Management', icon: '🏅' },
+                { key: 'communication', label: 'Communication', icon: '💬' },
+                { key: 'analytics', label: 'Analytics', icon: '📈' },
+                { key: 'settings', label: 'Settings', icon: '⚙️' },
+              ].map((page) => (
+                <div key={page.key} className="border-b border-gray-200 pb-2 last:border-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium text-gray-900">
+                      {page.icon} {page.label}
+                    </span>
+                  </div>
+                  <div className="flex gap-3 ml-6">
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={adminForm.permissions[page.key as keyof typeof adminForm.permissions]?.includes('read') || false}
+                        onChange={(e) => {
+                          const currentPerms = adminForm.permissions[page.key as keyof typeof adminForm.permissions] || [];
+                          const newPerms = e.target.checked
+                            ? [...currentPerms, 'read']
+                            : currentPerms.filter(p => p !== 'read');
+                          setAdminForm({
+                            ...adminForm,
+                            permissions: { ...adminForm.permissions, [page.key]: newPerms }
+                          });
+                        }}
+                        className="w-3 h-3 text-blue-600"
+                      />
+                      <span className="ml-1 text-xs text-blue-600">Read</span>
+                    </label>
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={adminForm.permissions[page.key as keyof typeof adminForm.permissions]?.includes('write') || false}
+                        onChange={(e) => {
+                          const currentPerms = adminForm.permissions[page.key as keyof typeof adminForm.permissions] || [];
+                          const newPerms = e.target.checked
+                            ? [...currentPerms, 'write']
+                            : currentPerms.filter(p => p !== 'write');
+                          setAdminForm({
+                            ...adminForm,
+                            permissions: { ...adminForm.permissions, [page.key]: newPerms }
+                          });
+                        }}
+                        className="w-3 h-3 text-green-600"
+                      />
+                      <span className="ml-1 text-xs text-green-600">Write</span>
+                    </label>
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={adminForm.permissions[page.key as keyof typeof adminForm.permissions]?.includes('update') || false}
+                        onChange={(e) => {
+                          const currentPerms = adminForm.permissions[page.key as keyof typeof adminForm.permissions] || [];
+                          const newPerms = e.target.checked
+                            ? [...currentPerms, 'update']
+                            : currentPerms.filter(p => p !== 'update');
+                          setAdminForm({
+                            ...adminForm,
+                            permissions: { ...adminForm.permissions, [page.key]: newPerms }
+                          });
+                        }}
+                        className="w-3 h-3 text-purple-600"
+                      />
+                      <span className="ml-1 text-xs text-purple-600">Update</span>
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              <strong>None:</strong> No access | <strong>Read:</strong> View only | <strong>Write:</strong> Add/Edit | <strong>Update:</strong> Edit & delete
+            </p>
           </div>
 
           <label className="flex items-center gap-2 cursor-pointer">

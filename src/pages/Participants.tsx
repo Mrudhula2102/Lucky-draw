@@ -287,13 +287,7 @@ export const Participants: React.FC = () => {
         </div>
         {participants.filter((p) => p.isDuplicate).length > 0 && (
           <div className="mt-4">
-            <Button
-              variant="danger"
-              icon={<UserX className="w-5 h-5" />}
-              onClick={handleRemoveDuplicates}
-            >
-              Remove All Duplicates
-            </Button>
+            
           </div>
         )}
       </Card>

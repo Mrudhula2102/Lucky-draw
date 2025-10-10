@@ -57,6 +57,18 @@ export const AdminManagement: React.FC = () => {
     email: '',
     password: '',
     role: 'MODERATOR' as 'ADMIN' | 'SUPERADMIN' | 'MODERATOR',
+    custom_role: '',
+    // COMMENTED OUT - Permissions disabled
+    // permissions: {
+    //   dashboard: ['read'] as ('read' | 'write' | 'update')[],
+    //   contests: [] as ('read' | 'write' | 'update')[],
+    //   participants: [] as ('read' | 'write' | 'update')[],
+    //   draw: [] as ('read' | 'write' | 'update')[],
+    //   winners: [] as ('read' | 'write' | 'update')[],
+    //   communication: [] as ('read' | 'write' | 'update')[],
+    //   analytics: [] as ('read' | 'write' | 'update')[],
+    //   settings: [] as ('read' | 'write' | 'update')[],
+    // },
     two_factor: false,
   });
 
@@ -166,6 +178,18 @@ export const AdminManagement: React.FC = () => {
             email: admin.email,
             password: '',
             role: admin.role,
+            custom_role: admin.custom_role || '',
+            // COMMENTED OUT - Permissions disabled
+            // permissions: {
+            //   dashboard: admin.permissions?.dashboard || ['read'],
+            //   contests: admin.permissions?.contests || [],
+            //   participants: admin.permissions?.participants || [],
+            //   draw: admin.permissions?.draw || [],
+            //   winners: admin.permissions?.winners || [],
+            //   communication: admin.permissions?.communication || [],
+            //   analytics: admin.permissions?.analytics || [],
+            //   settings: admin.permissions?.settings || [],
+            // },
             two_factor: admin.two_factor,
           });
           setShowEditModal(true);
@@ -233,6 +257,8 @@ export const AdminManagement: React.FC = () => {
         email: formData.email,
         password_hash: formData.password, // In production, this should be hashed
         role: formData.role,
+        // custom_role: formData.custom_role || null, // COMMENTED OUT - Run ADD_CUSTOM_ROLE_COLUMN.sql first
+        // permissions: formData.permissions, // COMMENTED OUT - Permissions disabled
         two_factor: formData.two_factor,
       });
 
@@ -257,6 +283,18 @@ export const AdminManagement: React.FC = () => {
         email: '',
         password: '',
         role: 'MODERATOR',
+        custom_role: '',
+        // COMMENTED OUT - Permissions disabled
+        // permissions: {
+        //   dashboard: ['read'],
+        //   contests: [],
+        //   participants: [],
+        //   draw: [],
+        //   winners: [],
+        //   communication: [],
+        //   analytics: [],
+        //   settings: [],
+        // },
         two_factor: false,
       });
       await loadData();
@@ -278,6 +316,8 @@ export const AdminManagement: React.FC = () => {
         name: formData.name,
         email: formData.email,
         role: formData.role,
+        // custom_role: formData.custom_role || null, // COMMENTED OUT - Run ADD_CUSTOM_ROLE_COLUMN.sql first
+        // permissions: formData.permissions, // COMMENTED OUT - Permissions disabled
         two_factor: formData.two_factor,
       };
 
@@ -310,6 +350,18 @@ export const AdminManagement: React.FC = () => {
         email: '',
         password: '',
         role: 'MODERATOR',
+        custom_role: '',
+        // COMMENTED OUT - Permissions disabled
+        // permissions: {
+        //   dashboard: ['read'],
+        //   contests: [],
+        //   participants: [],
+        //   draw: [],
+        //   winners: [],
+        //   communication: [],
+        //   analytics: [],
+        //   settings: [],
+        // },
         two_factor: false,
       });
       await loadData();
@@ -600,7 +652,22 @@ export const AdminManagement: React.FC = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {getRoleBadge(admin.role)}
+                          <div className="space-y-1">
+                            {/* Show custom role if exists, otherwise show system role badge */}
+                            {admin.custom_role ? (
+                              <div className="flex flex-col gap-1">
+                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border bg-purple-100 text-purple-800 border-purple-200 w-fit">
+                                  <UserCheck className="w-3 h-3" />
+                                  {admin.custom_role}
+                                </span>
+                                <div className="text-xs text-gray-500">
+                                  ({admin.role})
+                                </div>
+                              </div>
+                            ) : (
+                              getRoleBadge(admin.role)
+                            )}
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {getTwoFactorBadge(admin.two_factor)}
@@ -615,9 +682,21 @@ export const AdminManagement: React.FC = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {admin.permissionCount} permissions
-                          </span>
+                          <div className="flex flex-wrap gap-1">
+                            {admin.permissions && Object.keys(admin.permissions).length > 0 ? (
+                              <>
+                                {Object.entries(admin.permissions).filter(([_, levels]) => levels && Array.isArray(levels) && levels.length > 0).map(([page, levels]) => (
+                                  <span key={page} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                    {page}: {(levels as string[]).join(', ')}
+                                  </span>
+                                ))}
+                              </>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                No permissions
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex items-center gap-2">
@@ -893,16 +972,27 @@ export const AdminManagement: React.FC = () => {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                <select
-                  value={formData.role}
-                  onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value as any }))}
+                <input
+                  type="text"
+                  value={formData.custom_role}
+                  onChange={(e) => setFormData(prev => ({ ...prev, custom_role: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="MODERATOR">Moderator</option>
-                  <option value="ADMIN">Admin</option>
-                  <option value="SUPERADMIN">Super Admin</option>
-                </select>
+                  placeholder="e.g., Event Manager, Data Analyst, Contest Moderator"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">Define the role name for this admin</p>
               </div>
+              
+              {/* COMMENTED OUT - Permissions UI disabled for Create Modal */}
+              {/* <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Page Permissions</label>
+                <div className="space-y-3 bg-gray-50 p-4 rounded-lg max-h-64 overflow-y-auto">
+                  Permissions UI removed temporarily
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Permissions feature is currently disabled
+                </p>
+              </div> */}
               
               <div className="flex items-center">
                 <input
@@ -927,6 +1017,18 @@ export const AdminManagement: React.FC = () => {
                     email: '',
                     password: '',
                     role: 'MODERATOR',
+                    custom_role: '',
+                    // COMMENTED OUT - Permissions disabled
+                    // permissions: {
+                    //   dashboard: ['read'],
+                    //   contests: [],
+                    //   participants: [],
+                    //   draw: [],
+                    //   winners: [],
+                    //   communication: [],
+                    //   analytics: [],
+                    //   settings: [],
+                    // },
                     two_factor: false,
                   });
                 }}
@@ -987,16 +1089,27 @@ export const AdminManagement: React.FC = () => {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                <select
-                  value={formData.role}
-                  onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value as any }))}
+                <input
+                  type="text"
+                  value={formData.custom_role}
+                  onChange={(e) => setFormData(prev => ({ ...prev, custom_role: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="MODERATOR">Moderator</option>
-                  <option value="ADMIN">Admin</option>
-                  <option value="SUPERADMIN">Super Admin</option>
-                </select>
+                  placeholder="e.g., Event Manager, Data Analyst, Contest Moderator"
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">Define the role name for this admin</p>
               </div>
+              
+              {/* COMMENTED OUT - Permissions UI disabled for Edit Modal */}
+              {/* <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Page Permissions</label>
+                <div className="space-y-3 bg-gray-50 p-4 rounded-lg max-h-64 overflow-y-auto">
+                  Permissions UI removed temporarily
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Permissions feature is currently disabled
+                </p>
+              </div> */}
               
               <div className="flex items-center">
                 <input
@@ -1022,6 +1135,18 @@ export const AdminManagement: React.FC = () => {
                     email: '',
                     password: '',
                     role: 'MODERATOR',
+                    custom_role: '',
+                    // COMMENTED OUT - Permissions disabled
+                    // permissions: {
+                    //   dashboard: ['read'],
+                    //   contests: [],
+                    //   participants: [],
+                    //   draw: [],
+                    //   winners: [],
+                    //   communication: [],
+                    //   analytics: [],
+                    //   settings: [],
+                    // },
                     two_factor: false,
                   });
                 }}
