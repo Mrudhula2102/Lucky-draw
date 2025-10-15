@@ -8,7 +8,24 @@ export interface User {
   createdAt: string;
   lastLogin?: string;
   twoFactorEnabled: boolean;
+  permissions?: PagePermissions;
+  customRole?: string;
 }
+
+export interface PagePermissions {
+  dashboard?: PermissionLevel[];
+  contests?: PermissionLevel[];
+  participants?: PermissionLevel[];
+  draw?: PermissionLevel[];
+  winners?: PermissionLevel[];
+  communication?: PermissionLevel[];
+  analytics?: PermissionLevel[];
+  settings?: PermissionLevel[];
+  user_management?: PermissionLevel[];
+  admin_management?: PermissionLevel[];
+}
+
+export type PermissionLevel = 'read' | 'write' | 'update';
 
 export enum UserRole {
   SUPER_ADMIN = 'SUPER_ADMIN',

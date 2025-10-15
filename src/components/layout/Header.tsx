@@ -4,6 +4,8 @@ import { useAuthStore } from '../../store/authStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { DatabaseService } from '../../services/database';
+import { AuthService } from '../../services/authService';
+import toast from 'react-hot-toast';
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -35,9 +37,28 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
     return 'all';
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      // Call AuthService logout to handle both Supabase and local logout
+      await AuthService.logout();
+      
+      // Clear local auth state
+      logout();
+      
+      // Show success message
+      toast.success('Logged out successfully', {
+        icon: '👋',
+        duration: 2000,
+      });
+      
+      // Navigate to login
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Still logout locally even if remote logout fails
+      logout();
+      navigate('/login');
+    }
   };
 
   // Universal search function - searches everything

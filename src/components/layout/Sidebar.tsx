@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -12,23 +12,25 @@ import {
   UserCog,
   X,
 } from 'lucide-react';
+import { usePermissions, PageKey } from '../../hooks/usePermissions';
 
 interface NavItem {
   path: string;
   icon: React.ReactNode;
   label: string;
+  page: PageKey; // Permission key
 }
 
-const navItems: NavItem[] = [
-  { path: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, label: 'Dashboard' },
-  { path: '/contests', icon: <Trophy className="w-5 h-5" />, label: 'Contests' },
-  { path: '/participants', icon: <Users className="w-5 h-5" />, label: 'Participants' },
-  { path: '/draw', icon: <Sparkles className="w-5 h-5" />, label: 'Lucky Draw' },
-  { path: '/winners', icon: <Award className="w-5 h-5" />, label: 'Winners' },
-  { path: '/communication', icon: <MessageSquare className="w-5 h-5" />, label: 'Communication' },
-  { path: '/analytics', icon: <BarChart3 className="w-5 h-5" />, label: 'Analytics' },
-  { path: '/admin-management', icon: <UserCog className="w-5 h-5" />, label: 'User Management' },
-  { path: '/settings', icon: <Settings className="w-5 h-5" />, label: 'Settings' },
+const allNavItems: NavItem[] = [
+  { path: '/dashboard', icon: <LayoutDashboard className="w-5 h-5" />, label: 'Dashboard', page: 'dashboard' },
+  { path: '/contests', icon: <Trophy className="w-5 h-5" />, label: 'Contests', page: 'contests' },
+  { path: '/participants', icon: <Users className="w-5 h-5" />, label: 'Participants', page: 'participants' },
+  { path: '/draw', icon: <Sparkles className="w-5 h-5" />, label: 'Lucky Draw', page: 'draw' },
+  { path: '/winners', icon: <Award className="w-5 h-5" />, label: 'Winners', page: 'winners' },
+  { path: '/communication', icon: <MessageSquare className="w-5 h-5" />, label: 'Communication', page: 'communication' },
+  { path: '/analytics', icon: <BarChart3 className="w-5 h-5" />, label: 'Analytics', page: 'analytics' },
+  { path: '/admin-management', icon: <UserCog className="w-5 h-5" />, label: 'User Management', page: 'user_management' },
+  { path: '/settings', icon: <Settings className="w-5 h-5" />, label: 'Settings', page: 'settings' },
 ];
 
 interface SidebarProps {
@@ -37,6 +39,13 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
+  const { hasPageAccess } = usePermissions();
+
+  // Filter navigation items based on user permissions
+  const navItems = useMemo(() => {
+    return allNavItems.filter((item) => hasPageAccess(item.page));
+  }, [hasPageAccess]);
+
   return (
     <>
       {/* Mobile Overlay */}
@@ -84,6 +93,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = true, onClose }) => {
             <li key={item.path}>
               <NavLink
                 to={item.path}
+                onClick={onClose}
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                     isActive

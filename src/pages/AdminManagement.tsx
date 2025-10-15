@@ -46,6 +46,7 @@ export const AdminManagement: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
   const [adminToDelete, setAdminToDelete] = useState<AdminWithStats | null>(null);
   const [activityFilter, setActivityFilter] = useState({
     adminId: '',
@@ -60,17 +61,17 @@ export const AdminManagement: React.FC = () => {
     password: '',
     role: 'MODERATOR' as 'ADMIN' | 'SUPERADMIN' | 'MODERATOR',
     custom_role: '',
-    // COMMENTED OUT - Permissions disabled
-    // permissions: {
-    //   dashboard: ['read'] as ('read' | 'write' | 'update')[],
-    //   contests: [] as ('read' | 'write' | 'update')[],
-    //   participants: [] as ('read' | 'write' | 'update')[],
-    //   draw: [] as ('read' | 'write' | 'update')[],
-    //   winners: [] as ('read' | 'write' | 'update')[],
-    //   communication: [] as ('read' | 'write' | 'update')[],
-    //   analytics: [] as ('read' | 'write' | 'update')[],
-    //   settings: [] as ('read' | 'write' | 'update')[],
-    // },
+    permissions: {
+      dashboard: ['read'] as ('read' | 'write' | 'update')[],
+      contests: [] as ('read' | 'write' | 'update')[],
+      participants: [] as ('read' | 'write' | 'update')[],
+      draw: [] as ('read' | 'write' | 'update')[],
+      winners: [] as ('read' | 'write' | 'update')[],
+      communication: [] as ('read' | 'write' | 'update')[],
+      analytics: [] as ('read' | 'write' | 'update')[],
+      settings: [] as ('read' | 'write' | 'update')[],
+      user_management: [] as ('read' | 'write' | 'update')[],
+    },
     two_factor: false,
   });
 
@@ -84,6 +85,7 @@ export const AdminManagement: React.FC = () => {
 
   useEffect(() => {
     loadData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadData = async () => {
@@ -150,25 +152,14 @@ export const AdminManagement: React.FC = () => {
     const Icon = config.icon;
 
     return (
-      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${config.bg} ${config.text} ${config.border}`}>
+      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${config.bg} ${config.text} ${config.border} transition-all duration-200 hover:shadow-md hover:scale-105`}>
         <Icon className="w-3 h-3" />
         {role === 'SUPERADMIN' ? 'Super Admin' : role.charAt(0) + role.slice(1).toLowerCase()}
       </span>
     );
   };
 
-  const getTwoFactorBadge = (enabled: boolean) => {
-    return (
-      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-        enabled 
-          ? 'bg-green-100 text-green-800 border border-green-200' 
-          : 'bg-gray-100 text-gray-800 border border-gray-200'
-      }`}>
-        <Lock className="w-3 h-3" />
-        {enabled ? 'Enabled' : 'Disabled'}
-      </span>
-    );
-  };
+  // Removed getTwoFactorBadge - not currently used
 
   const handleAction = async (action: string, admin: AdminWithStats) => {
     try {
@@ -181,24 +172,24 @@ export const AdminManagement: React.FC = () => {
             password: '',
             role: admin.role,
             custom_role: admin.custom_role || '',
-            // COMMENTED OUT - Permissions disabled
-            // permissions: {
-            //   dashboard: admin.permissions?.dashboard || ['read'],
-            //   contests: admin.permissions?.contests || [],
-            //   participants: admin.permissions?.participants || [],
-            //   draw: admin.permissions?.draw || [],
-            //   winners: admin.permissions?.winners || [],
-            //   communication: admin.permissions?.communication || [],
-            //   analytics: admin.permissions?.analytics || [],
-            //   settings: admin.permissions?.settings || [],
-            // },
+            permissions: {
+              dashboard: admin.permissions?.dashboard || ['read'],
+              contests: admin.permissions?.contests || [],
+              participants: admin.permissions?.participants || [],
+              draw: admin.permissions?.draw || [],
+              winners: admin.permissions?.winners || [],
+              communication: admin.permissions?.communication || [],
+              analytics: admin.permissions?.analytics || [],
+              settings: admin.permissions?.settings || [],
+              user_management: admin.permissions?.user_management || [],
+            },
             two_factor: admin.two_factor,
           });
           setShowEditModal(true);
           break;
         case 'view':
           setSelectedAdmin(admin);
-          toast.success(`Viewing ${admin.name} details`);
+          setShowViewModal(true);
           break;
         case 'lock':
           // Toggle lock status (for demo purposes, we'll just update a local state)
@@ -264,22 +255,39 @@ export const AdminManagement: React.FC = () => {
         return;
       }
 
+      // Trim inputs to avoid whitespace issues
+      const trimmedEmail = formData.email.trim();
+      const trimmedPassword = formData.password.trim();
+      const trimmedName = formData.name.trim();
+
       // Check if email already exists
-      const existingAdmin = await AdminService.getAdminByEmail(formData.email);
+      const existingAdmin = await AdminService.getAdminByEmail(trimmedEmail);
       if (existingAdmin) {
         toast.error('An admin with this email already exists');
         return;
       }
 
+      console.log('🔧 Creating new admin with credentials:', {
+        email: trimmedEmail,
+        password: trimmedPassword,
+        role: formData.role
+      });
+
       // Create admin with proper field names (AdminService expects snake_case)
       const newAdmin = await AdminService.createAdmin({
-        name: formData.name,
-        email: formData.email,
-        password_hash: formData.password, // In production, this should be hashed
+        name: trimmedName,
+        email: trimmedEmail,
+        password_hash: trimmedPassword, // In production, this should be hashed
         role: formData.role,
-        // custom_role: formData.custom_role || null, // COMMENTED OUT - Run ADD_CUSTOM_ROLE_COLUMN.sql first
-        // permissions: formData.permissions, // COMMENTED OUT - Permissions disabled
+        custom_role: formData.custom_role.trim() || null,
+        permissions: formData.permissions,
         two_factor: formData.two_factor,
+      });
+
+      console.log('✅ Admin created successfully in database:', {
+        id: newAdmin.admin_id,
+        email: newAdmin.email,
+        password_hash: newAdmin.password_hash
       });
 
       // Log the admin creation activity
@@ -304,17 +312,17 @@ export const AdminManagement: React.FC = () => {
         password: '',
         role: 'MODERATOR',
         custom_role: '',
-        // COMMENTED OUT - Permissions disabled
-        // permissions: {
-        //   dashboard: ['read'],
-        //   contests: [],
-        //   participants: [],
-        //   draw: [],
-        //   winners: [],
-        //   communication: [],
-        //   analytics: [],
-        //   settings: [],
-        // },
+        permissions: {
+          dashboard: ['read'],
+          contests: [],
+          participants: [],
+          draw: [],
+          winners: [],
+          communication: [],
+          analytics: [],
+          settings: [],
+          user_management: [],
+        },
         two_factor: false,
       });
       await loadData();
@@ -332,21 +340,22 @@ export const AdminManagement: React.FC = () => {
         return;
       }
 
-      const updateData: Partial<Admin> = {
-        name: formData.name,
-        email: formData.email,
+      // Trim inputs to avoid whitespace issues
+      const updates: Partial<Admin> = {
+        name: formData.name.trim(),
+        email: formData.email.trim(),
         role: formData.role,
-        // custom_role: formData.custom_role || null, // COMMENTED OUT - Run ADD_CUSTOM_ROLE_COLUMN.sql first
-        // permissions: formData.permissions, // COMMENTED OUT - Permissions disabled
+        custom_role: formData.custom_role.trim() || null,
+        permissions: formData.permissions,
         two_factor: formData.two_factor,
       };
 
       // Only include password if it's provided
       if (formData.password) {
-        updateData.password_hash = formData.password;
+        updates.password_hash = formData.password.trim();
       }
 
-      await AdminService.updateAdmin(selectedAdmin.admin_id, updateData);
+      await AdminService.updateAdmin(selectedAdmin.admin_id, updates);
 
       // Log the admin update activity
       try {
@@ -371,17 +380,17 @@ export const AdminManagement: React.FC = () => {
         password: '',
         role: 'MODERATOR',
         custom_role: '',
-        // COMMENTED OUT - Permissions disabled
-        // permissions: {
-        //   dashboard: ['read'],
-        //   contests: [],
-        //   participants: [],
-        //   draw: [],
-        //   winners: [],
-        //   communication: [],
-        //   analytics: [],
-        //   settings: [],
-        // },
+        permissions: {
+          dashboard: ['read'],
+          contests: [],
+          participants: [],
+          draw: [],
+          winners: [],
+          communication: [],
+          analytics: [],
+          settings: [],
+          user_management: [],
+        },
         two_factor: false,
       });
       await loadData();
@@ -657,9 +666,6 @@ export const AdminManagement: React.FC = () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Role
                       </th>
-                      {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        2FA
-                      </th> */}
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Last Login
                       </th>
@@ -697,7 +703,7 @@ export const AdminManagement: React.FC = () => {
                             {/* Show custom role if exists, otherwise show system role badge */}
                             {admin.custom_role ? (
                               <div className="flex flex-col gap-1">
-                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border bg-purple-100 text-purple-800 border-purple-200 w-fit">
+                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border bg-purple-100 text-purple-800 border-purple-200 w-fit transition-all duration-200 hover:shadow-md hover:scale-105">
                                   <UserCheck className="w-3 h-3" />
                                   {admin.custom_role}
                                 </span>
@@ -709,9 +715,6 @@ export const AdminManagement: React.FC = () => {
                               getRoleBadge(admin.role)
                             )}
                           </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {getTwoFactorBadge(admin.two_factor)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           <div className="flex items-center gap-1">
@@ -742,33 +745,22 @@ export const AdminManagement: React.FC = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={() => handleAction('edit', admin)}
-                              className="text-blue-600 hover:text-blue-900 p-1 rounded hover:scale-110 transition-transform"
-                              title="Edit"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
                               onClick={() => handleAction('view', admin)}
-                              className="text-green-600 hover:text-green-900 p-1 rounded hover:scale-110 transition-transform"
+                              className="text-green-600 hover:text-green-900 p-2 rounded-lg hover:bg-green-50 transition-all duration-200 hover:scale-110"
                               title="View"
                             >
                               <Eye className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => handleAction('lock', admin)}
-                              className={`p-1 rounded hover:scale-110 transition-transform ${
-                                admin.isLocked 
-                                  ? 'text-red-600 hover:text-red-900' 
-                                  : 'text-yellow-600 hover:text-yellow-900'
-                              }`}
-                              title={admin.isLocked ? 'Unlock' : 'Lock'}
+                              onClick={() => handleAction('edit', admin)}
+                              className="text-blue-600 hover:text-blue-900 p-2 rounded-lg hover:bg-blue-50 transition-all duration-200 hover:scale-110"
+                              title="Edit"
                             >
-                              <Lock className="w-4 h-4" />
+                              <Edit className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => handleAction('delete', admin)}
-                              className="text-red-600 hover:text-red-900 p-1 rounded hover:scale-110 transition-transform"
+                              className="text-red-600 hover:text-red-900 p-2 rounded-lg hover:bg-red-50 transition-all duration-200 hover:scale-110"
                               title="Delete"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -953,19 +945,270 @@ export const AdminManagement: React.FC = () => {
 
           {activeTab === 'permissions' && (
             <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900">Permission Matrix</h3>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-sm text-gray-600">Permission matrix view coming soon...</p>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Permission Matrix</h3>
+                <p className="text-sm text-gray-500">View all admin permissions at a glance</p>
+              </div>
+              
+              <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10">
+                        Admin
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        📊 Dashboard
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        🏆 Contests
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        👥 Participants
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        🎲 Draw
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        🏅 Winners
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        💬 Communication
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        📈 Analytics
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        👤 Users
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        ⚙️ Settings
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {admins.map((admin) => {
+                      const getPermissionBadge = (perms: string[] | undefined) => {
+                        if (!perms || perms.length === 0) {
+                          return <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600">None</span>;
+                        }
+                        if (perms.length === 3) {
+                          return <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700">Full</span>;
+                        }
+                        if (perms.includes('read') && perms.includes('write')) {
+                          return <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700">R+W</span>;
+                        }
+                        if (perms.includes('read')) {
+                          return <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-700">Read</span>;
+                        }
+                        return <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600">Limited</span>;
+                      };
+
+                      return (
+                        <tr key={admin.admin_id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 whitespace-nowrap sticky left-0 bg-white z-10">
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">{admin.name}</p>
+                              <p className="text-xs text-gray-500">{admin.custom_role || admin.role}</p>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-center whitespace-nowrap">
+                            {getPermissionBadge(admin.permissions?.dashboard)}
+                          </td>
+                          <td className="px-4 py-3 text-center whitespace-nowrap">
+                            {getPermissionBadge(admin.permissions?.contests)}
+                          </td>
+                          <td className="px-4 py-3 text-center whitespace-nowrap">
+                            {getPermissionBadge(admin.permissions?.participants)}
+                          </td>
+                          <td className="px-4 py-3 text-center whitespace-nowrap">
+                            {getPermissionBadge(admin.permissions?.draw)}
+                          </td>
+                          <td className="px-4 py-3 text-center whitespace-nowrap">
+                            {getPermissionBadge(admin.permissions?.winners)}
+                          </td>
+                          <td className="px-4 py-3 text-center whitespace-nowrap">
+                            {getPermissionBadge(admin.permissions?.communication)}
+                          </td>
+                          <td className="px-4 py-3 text-center whitespace-nowrap">
+                            {getPermissionBadge(admin.permissions?.analytics)}
+                          </td>
+                          <td className="px-4 py-3 text-center whitespace-nowrap">
+                            {getPermissionBadge(admin.permissions?.user_management)}
+                          </td>
+                          <td className="px-4 py-3 text-center whitespace-nowrap">
+                            {getPermissionBadge(admin.permissions?.settings)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Legend */}
+              <div className="flex items-center gap-4 text-xs text-gray-600 bg-gray-50 p-3 rounded-lg">
+                <span className="font-medium">Legend:</span>
+                <div className="flex items-center gap-1">
+                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700">Full</span>
+                  <span>= Read, Write, Update</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-700">R+W</span>
+                  <span>= Read + Write</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-700">Read</span>
+                  <span>= Read only</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600">None</span>
+                  <span>= No access</span>
+                </div>
               </div>
             </div>
           )}
 
           {activeTab === 'access' && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium text-gray-900">Dashboard Access Control</h3>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-sm text-gray-600">Dashboard access control coming soon...</p>
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900">Dashboard Access Control</h3>
+                  <p className="text-sm text-gray-500 mt-1">Manage which admins can access the dashboard</p>
+                </div>
               </div>
+
+              {/* Access Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-green-800">Full Access</p>
+                      <p className="text-2xl font-bold text-green-900 mt-1">
+                        {admins.filter(a => a.permissions?.dashboard?.length === 3).length}
+                      </p>
+                    </div>
+                    <UserCheck className="w-8 h-8 text-green-600" />
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-blue-800">Read Only</p>
+                      <p className="text-2xl font-bold text-blue-900 mt-1">
+                        {admins.filter(a => {
+                          const perms = a.permissions?.dashboard || [];
+                          return perms.includes('read') && perms.length < 3;
+                        }).length}
+                      </p>
+                    </div>
+                    <Eye className="w-8 h-8 text-blue-600" />
+                  </div>
+                </div>
+
+                <div className="bg-gradient-to-br from-red-50 to-red-100 border border-red-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-red-800">No Access</p>
+                      <p className="text-2xl font-bold text-red-900 mt-1">
+                        {admins.filter(a => !a.permissions?.dashboard || a.permissions.dashboard.length === 0).length}
+                      </p>
+                    </div>
+                    <Lock className="w-8 h-8 text-red-600" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Admin Access List */}
+              <div className="bg-white rounded-lg border border-gray-200">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <h4 className="text-sm font-semibold text-gray-900">Admin Dashboard Access</h4>
+                </div>
+                <div className="divide-y divide-gray-200">
+                  {admins.map((admin) => {
+                    const dashboardPerms = admin.permissions?.dashboard || [];
+                    const hasFullAccess = dashboardPerms.length === 3;
+                    const hasReadOnly = dashboardPerms.includes('read') && dashboardPerms.length < 3;
+                    const hasNoAccess = dashboardPerms.length === 0;
+
+                    return (
+                      <div key={admin.admin_id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
+                              {admin.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">{admin.name}</p>
+                              <p className="text-xs text-gray-500">{admin.email}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            {/* Role Badge */}
+                            <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                              {admin.custom_role || admin.role}
+                            </span>
+
+                            {/* Access Badge */}
+                            {hasFullAccess && (
+                              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">
+                                <UserCheck className="w-3 h-3" />
+                                Full Access
+                              </span>
+                            )}
+                            {hasReadOnly && (
+                              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
+                                <Eye className="w-3 h-3" />
+                                Read Only
+                              </span>
+                            )}
+                            {hasNoAccess && (
+                              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 border border-red-200">
+                                <Lock className="w-3 h-3" />
+                                No Access
+                              </span>
+                            )}
+
+                            {/* Permissions Detail */}
+                            <div className="text-xs text-gray-500">
+                              {dashboardPerms.length > 0 ? (
+                                <span className="flex items-center gap-1">
+                                  {dashboardPerms.includes('read') && <span className="text-blue-600">R</span>}
+                                  {dashboardPerms.includes('write') && <span className="text-green-600">W</span>}
+                                  {dashboardPerms.includes('update') && <span className="text-purple-600">U</span>}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400">—</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Info Box */}
+              {/* <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex gap-3">
+                  <Shield className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-sm font-medium text-blue-900 mb-1">About Dashboard Access</h4>
+                    <p className="text-sm text-blue-800">
+                      Dashboard access controls what admins can see and do on the main dashboard. 
+                      <strong> Full Access</strong> allows viewing, creating, and editing. 
+                      <strong> Read Only</strong> allows viewing only. 
+                      <strong> No Access</strong> blocks dashboard access completely.
+                    </p>
+                    <p className="text-sm text-blue-800 mt-2">
+                      To modify access, click "Setup permissions" on any user in the Users tab.
+                    </p>
+                  </div>
+                </div>
+              </div> */}
             </div>
           )}
         </div>
@@ -973,8 +1216,8 @@ export const AdminManagement: React.FC = () => {
 
       {/* Create Admin Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Create New Admin</h3>
             
             {/* Admin Limit Warning */}
@@ -1039,16 +1282,89 @@ export const AdminManagement: React.FC = () => {
                 <p className="text-xs text-gray-500 mt-1">Define the role name for this admin</p>
               </div>
               
-              {/* COMMENTED OUT - Permissions UI disabled for Create Modal */}
-              {/* <div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Page Permissions</label>
-                <div className="space-y-3 bg-gray-50 p-4 rounded-lg max-h-64 overflow-y-auto">
-                  Permissions UI removed temporarily
+                <div className="space-y-3 bg-gray-50 p-4 rounded-lg max-h-64 overflow-y-auto border border-gray-200">
+                  {[
+                    { key: 'dashboard', label: 'Dashboard', icon: '📊' },
+                    { key: 'contests', label: 'Contest Management', icon: '🏆' },
+                    { key: 'participants', label: 'Participant Management', icon: '👥' },
+                    { key: 'draw', label: 'Lucky Draw', icon: '🎲' },
+                    { key: 'winners', label: 'Winners Management', icon: '🏅' },
+                    { key: 'communication', label: 'Communication', icon: '💬' },
+                    { key: 'analytics', label: 'Analytics', icon: '📈' },
+                    { key: 'user_management', label: 'User Management', icon: '👤' },
+                    { key: 'settings', label: 'Settings', icon: '⚙️' },
+                  ].map((page) => (
+                    <div key={page.key} className="border-b border-gray-200 pb-2 last:border-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-medium text-gray-900">
+                          {page.icon} {page.label}
+                        </span>
+                      </div>
+                      <div className="flex gap-3 ml-6">
+                        <label className="flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.permissions[page.key as keyof typeof formData.permissions]?.includes('read') || false}
+                            onChange={(e) => {
+                              const currentPerms = formData.permissions[page.key as keyof typeof formData.permissions] || [];
+                              const newPerms = e.target.checked
+                                ? [...currentPerms, 'read']
+                                : currentPerms.filter(p => p !== 'read');
+                              setFormData({
+                                ...formData,
+                                permissions: { ...formData.permissions, [page.key]: newPerms }
+                              });
+                            }}
+                            className="w-3 h-3 text-blue-600"
+                          />
+                          <span className="ml-1 text-xs text-blue-600">Read</span>
+                        </label>
+                        <label className="flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.permissions[page.key as keyof typeof formData.permissions]?.includes('write') || false}
+                            onChange={(e) => {
+                              const currentPerms = formData.permissions[page.key as keyof typeof formData.permissions] || [];
+                              const newPerms = e.target.checked
+                                ? [...currentPerms, 'write']
+                                : currentPerms.filter(p => p !== 'write');
+                              setFormData({
+                                ...formData,
+                                permissions: { ...formData.permissions, [page.key]: newPerms }
+                              });
+                            }}
+                            className="w-3 h-3 text-green-600"
+                          />
+                          <span className="ml-1 text-xs text-green-600">Write</span>
+                        </label>
+                        <label className="flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={formData.permissions[page.key as keyof typeof formData.permissions]?.includes('update') || false}
+                            onChange={(e) => {
+                              const currentPerms = formData.permissions[page.key as keyof typeof formData.permissions] || [];
+                              const newPerms = e.target.checked
+                                ? [...currentPerms, 'update']
+                                : currentPerms.filter(p => p !== 'update');
+                              setFormData({
+                                ...formData,
+                                permissions: { ...formData.permissions, [page.key]: newPerms }
+                              });
+                            }}
+                            className="w-3 h-3 text-purple-600"
+                          />
+                          <span className="ml-1 text-xs text-purple-600">Update</span>
+                        </label>
+                      </div>
+                    </div>
+                  ))}
                 </div>
                 <p className="text-xs text-gray-500 mt-2">
-                  Permissions feature is currently disabled
+                  <strong>Read:</strong> View only | <strong>Write:</strong> Create new | <strong>Update:</strong> Edit & delete
                 </p>
-              </div> */}
+              </div>
               
               {/* <div className="flex items-center">
                 <input
@@ -1074,17 +1390,17 @@ export const AdminManagement: React.FC = () => {
                     password: '',
                     role: 'MODERATOR',
                     custom_role: '',
-                    // COMMENTED OUT - Permissions disabled
-                    // permissions: {
-                    //   dashboard: ['read'],
-                    //   contests: [],
-                    //   participants: [],
-                    //   draw: [],
-                    //   winners: [],
-                    //   communication: [],
-                    //   analytics: [],
-                    //   settings: [],
-                    // },
+                    permissions: {
+                      dashboard: ['read'],
+                      contests: [],
+                      participants: [],
+                      draw: [],
+                      winners: [],
+                      communication: [],
+                      analytics: [],
+                      settings: [],
+                      user_management: [],
+                    },
                     two_factor: false,
                   });
                 }}
@@ -1192,17 +1508,17 @@ export const AdminManagement: React.FC = () => {
                     password: '',
                     role: 'MODERATOR',
                     custom_role: '',
-                    // COMMENTED OUT - Permissions disabled
-                    // permissions: {
-                    //   dashboard: ['read'],
-                    //   contests: [],
-                    //   participants: [],
-                    //   draw: [],
-                    //   winners: [],
-                    //   communication: [],
-                    //   analytics: [],
-                    //   settings: [],
-                    // },
+                    permissions: {
+                      dashboard: ['read'],
+                      contests: [],
+                      participants: [],
+                      draw: [],
+                      winners: [],
+                      communication: [],
+                      analytics: [],
+                      settings: [],
+                      user_management: [],
+                    },
                     two_factor: false,
                   });
                 }}
@@ -1216,6 +1532,166 @@ export const AdminManagement: React.FC = () => {
               >
                 Update Admin
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Admin Modal */}
+      {showViewModal && selectedAdmin && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 rounded-t-xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center">
+                    <span className="text-blue-600 font-bold text-lg">
+                      {selectedAdmin.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white">User Details</h3>
+                    <p className="text-blue-100 text-sm">View complete user information</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowViewModal(false);
+                    setSelectedAdmin(null);
+                  }}
+                  className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-6">
+              {/* Basic Information */}
+              <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <Users className="w-5 h-5 text-blue-600" />
+                  Basic Information
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Name</label>
+                    <p className="text-sm font-medium text-gray-900 mt-1">{selectedAdmin.name}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Email</label>
+                    <p className="text-sm font-medium text-gray-900 mt-1">{selectedAdmin.email}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Role Information */}
+              <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-blue-600" />
+                  Role & Access
+                </h4>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned Role</label>
+                    <div className="mt-2">
+                      {selectedAdmin.custom_role ? (
+                        <div className="flex flex-col gap-2">
+                          <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium border bg-purple-100 text-purple-800 border-purple-200 w-fit">
+                            <UserCheck className="w-4 h-4" />
+                            {selectedAdmin.custom_role}
+                          </span>
+                          <span className="text-xs text-gray-500">System Role: {selectedAdmin.role}</span>
+                        </div>
+                      ) : (
+                        getRoleBadge(selectedAdmin.role)
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Permissions */}
+              <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-blue-600" />
+                  Permissions
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {selectedAdmin.permissions && Object.keys(selectedAdmin.permissions).length > 0 ? (
+                    <>
+                      {Object.entries(selectedAdmin.permissions)
+                        .filter(([_, levels]) => levels && Array.isArray(levels) && levels.length > 0)
+                        .map(([page, levels]) => (
+                          <span key={page} className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                            {page}: {(levels as string[]).join(', ')}
+                          </span>
+                        ))}
+                    </>
+                  ) : (
+                    <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-200 text-gray-700">
+                      No specific permissions assigned
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Activity Information */}
+              <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-blue-600" />
+                  Activity
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Last Login</label>
+                    <p className="text-sm font-medium text-gray-900 mt-1">
+                      {selectedAdmin.last_login 
+                        ? new Date(selectedAdmin.last_login).toLocaleString()
+                        : 'Never logged in'
+                      }
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Account Created</label>
+                    <p className="text-sm font-medium text-gray-900 mt-1">
+                      {selectedAdmin.created_at 
+                        ? new Date(selectedAdmin.created_at).toLocaleString()
+                        : 'N/A'
+                      }
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="sticky bottom-0 bg-gray-50 px-6 py-4 rounded-b-xl border-t border-gray-200">
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setShowViewModal(false);
+                    setSelectedAdmin(null);
+                  }}
+                  className="px-5 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-100 transition-colors"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    setShowViewModal(false);
+                    handleAction('edit', selectedAdmin);
+                  }}
+                  className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+                >
+                  <Edit className="w-4 h-4" />
+                  Edit User
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2, Shield, Loader } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Shield, Loader, Settings } from 'lucide-react';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
@@ -7,7 +7,8 @@ import { Badge } from '../components/common/Badge';
 import { Table } from '../components/common/Table';
 import { Modal } from '../components/common/Modal';
 import { formatDate } from '../utils/helpers';
-import { AdminService, Admin, AdminActivityLog } from '../services/adminService';
+import { AdminService, Admin, AdminActivityLog, PagePermissions } from '../services/adminService';
+import { PermissionModal } from '../components/permissions/PermissionModal';
 import toast from 'react-hot-toast';
 
 export const Users: React.FC = () => {
@@ -26,6 +27,8 @@ export const Users: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingAdmin, setEditingAdmin] = useState<Admin | null>(null);
   const [activeTab, setActiveTab] = useState<'users' | 'activity'>('users');
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [selectedAdminForPermissions, setSelectedAdminForPermissions] = useState<Admin | null>(null);
 
   const [adminForm, setAdminForm] = useState({
     name: '',
@@ -101,7 +104,15 @@ export const Users: React.FC = () => {
     {
       key: 'role',
       header: 'Role',
-      render: (admin: Admin) => getRoleBadge(admin.role),
+      render: (admin: Admin) => (
+        <div>
+          {admin.custom_role ? (
+            <Badge variant="info">{admin.custom_role}</Badge>
+          ) : (
+            getRoleBadge(admin.role)
+          )}
+        </div>
+      ),
     },
     // {
     //   key: 'twoFactor',
@@ -128,6 +139,17 @@ export const Users: React.FC = () => {
       header: 'Actions',
       render: (admin: Admin) => (
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setSelectedAdminForPermissions(admin);
+              setShowPermissionModal(true);
+            }}
+            className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+            title="Setup permissions"
+          >
+            <Settings className="w-4 h-4" />
+            Setup permissions
+          </button>
           <button
             onClick={() => handleEdit(admin)}
             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -223,6 +245,25 @@ export const Users: React.FC = () => {
     }
   };
 
+  const handleSavePermissions = async (permissions: PagePermissions, customRole: string) => {
+    if (!selectedAdminForPermissions) return;
+
+    try {
+      await AdminService.updateAdmin(selectedAdminForPermissions.admin_id, {
+        permissions,
+        custom_role: customRole || null,
+      });
+      toast.success('Permissions updated successfully!');
+      await loadData();
+      setShowPermissionModal(false);
+      setSelectedAdminForPermissions(null);
+    } catch (error) {
+      console.error('Error updating permissions:', error);
+      toast.error('Failed to update permissions');
+      throw error;
+    }
+  };
+
   const handleSaveAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -235,19 +276,18 @@ export const Users: React.FC = () => {
       setSaving(true);
 
       if (editingAdmin) {
-        // Update existing admin
+        // Update existing admin - trim inputs to avoid whitespace issues
         const updates: Partial<Admin> = {
-          name: adminForm.name,
-          email: adminForm.email,
+          name: adminForm.name.trim(),
+          email: adminForm.email.trim(),
           role: adminForm.role,
-          // custom_role: adminForm.customRole || null, // COMMENTED OUT - Run ADD_CUSTOM_ROLE_COLUMN.sql first
-          // permissions: adminForm.permissions, // COMMENTED OUT - Permissions disabled
+          custom_role: adminForm.customRole.trim() || null,
+          permissions: adminForm.permissions,
           two_factor: adminForm.twoFactor,
         };
-        
-        // Only include password if provided
+
         if (adminForm.passwordHash) {
-          updates.password_hash = adminForm.passwordHash; // In real app, hash this
+          updates.password_hash = adminForm.passwordHash.trim(); // In real app, hash this
         }
 
         await AdminService.updateAdmin(editingAdmin.admin_id, updates);
@@ -259,13 +299,14 @@ export const Users: React.FC = () => {
           return;
         }
 
+        // Trim inputs to avoid whitespace issues
         await AdminService.createAdmin({
-          name: adminForm.name,
-          email: adminForm.email,
-          password_hash: adminForm.passwordHash, // In real app, hash this
+          name: adminForm.name.trim(),
+          email: adminForm.email.trim(),
+          password_hash: adminForm.passwordHash.trim(), // In real app, hash this
           role: adminForm.role,
-          // custom_role: adminForm.customRole || null, // COMMENTED OUT - Run ADD_CUSTOM_ROLE_COLUMN.sql first
-          // permissions: adminForm.permissions, // COMMENTED OUT - Permissions disabled
+          custom_role: adminForm.customRole.trim() || null,
+          permissions: adminForm.permissions,
           two_factor: adminForm.twoFactor,
         });
         toast.success('Admin created successfully!');
@@ -482,6 +523,7 @@ export const Users: React.FC = () => {
                 { key: 'winners', label: 'Winners Management', icon: '🏅' },
                 { key: 'communication', label: 'Communication', icon: '💬' },
                 { key: 'analytics', label: 'Analytics', icon: '📈' },
+                { key: 'user_management', label: 'User Management', icon: '👤' },
                 { key: 'settings', label: 'Settings', icon: '⚙️' },
               ].map((page) => (
                 <div key={page.key} className="border-b border-gray-200 pb-2 last:border-0">
@@ -583,6 +625,19 @@ export const Users: React.FC = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Permission Modal */}
+      {selectedAdminForPermissions && (
+        <PermissionModal
+          admin={selectedAdminForPermissions}
+          isOpen={showPermissionModal}
+          onClose={() => {
+            setShowPermissionModal(false);
+            setSelectedAdminForPermissions(null);
+          }}
+          onSave={handleSavePermissions}
+        />
+      )}
     </div>
   );
 };

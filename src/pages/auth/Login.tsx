@@ -6,7 +6,7 @@ import { Input } from '../../components/common/Input';
 import { useAuthStore } from '../../store/authStore';
 import { UserRole } from '../../types';
 import toast, { Toaster } from 'react-hot-toast';
-import { supabase } from '../../lib/supabase';
+import { AuthService } from '../../services/authService';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -22,50 +22,48 @@ export const Login: React.FC = () => {
     setError(''); // Clear previous errors
 
     try {
-      // Query the admins table directly
-      const { data: adminData, error: queryError } = await supabase
-        .from('admins')
-        .select('*')
-        .eq('email', email)
-        .single();
+      // Use the enhanced authentication service
+      const authResponse = await AuthService.login(email, password);
 
-      if (queryError || !adminData) {
-        console.error('Admin not found:', queryError);
-        setError('Invalid email or password');
+      if (!authResponse.success || !authResponse.user || !authResponse.token) {
+        setError(authResponse.error || 'Invalid email or password');
         setLoading(false);
         return;
       }
 
-      // Check if password matches (assuming plain text for now)
-      // NOTE: In production, passwords should be hashed with bcrypt
-      if (adminData.password_hash !== password) {
-        // If password_hash is actually hashed, you'll need a backend API to verify
-        // For now, try direct comparison
-        setError('Invalid email or password');
-        setLoading(false);
-        return;
-      }
-      
-      console.log('Admin authenticated:', adminData.email);
-      
-      // Create user object for the store
-      const user = {
-        id: adminData.admin_id.toString(),
-        email: adminData.email,
-        name: adminData.name,
-        role: adminData.role as UserRole,
-        createdAt: adminData.created_at,
-        twoFactorEnabled: adminData.two_factor,
-      };
+      // Store user in auth store
+      login(authResponse.user, authResponse.token);
 
-      // Store user and generate a simple token
-      const token = btoa(`${adminData.admin_id}:${Date.now()}`);
-      login(user, token);
-      toast.success('Login successful!');
-      navigate('/dashboard');
+      // Show success message with role and source information
+      const roleLabel = authResponse.user.role === UserRole.SUPER_ADMIN 
+        ? 'Super Admin' 
+        : authResponse.user.role === UserRole.ADMIN 
+        ? 'Admin' 
+        : 'Moderator';
+      
+      const sourceLabel = authResponse.source === 'supabase_auth' 
+        ? 'Authentication' 
+        : 'Database';
+      
+      toast.success(`Welcome back, ${authResponse.user.name}! (${roleLabel})`, {
+        icon: authResponse.source === 'supabase_auth' ? '👑' : '🎉',
+        duration: 3000,
+      });
+
+      // Log authentication source for debugging
+      console.log(`✅ Authenticated via ${sourceLabel} as ${roleLabel}`);
+
+      // Redirect based on role and source
+      const redirectPath = AuthService.getRedirectPath(authResponse.user.role, authResponse.source);
+      
+      // Small delay for better UX
+      setTimeout(() => {
+        navigate(redirectPath);
+      }, 500);
+
     } catch (error: any) {
       console.error('Login error:', error);
-      setError('Invalid email or password');
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -108,9 +106,20 @@ export const Login: React.FC = () => {
               required
             />
 
+            {/* Info Message */}
+            {/* <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
+              <Shield className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-blue-800">
+                <p className="font-medium mb-1">Secure Authentication</p>
+                <p className="text-xs text-blue-700">
+                  Super Admin credentials verified via Authentication. Other admins verified via Database.
+                </p>
+              </div>
+            </div> */}
+
             {/* Error Message */}
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2 animate-shake">
                 <svg className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>

@@ -23,6 +23,8 @@ export interface PagePermissions {
   communication?: PermissionLevel[];
   analytics?: PermissionLevel[];
   settings?: PermissionLevel[];
+  user_management?: PermissionLevel[];
+  admin_management?: PermissionLevel[];
 }
 
 export type PermissionLevel = 'read' | 'write' | 'update';
